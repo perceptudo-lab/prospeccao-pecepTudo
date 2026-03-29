@@ -473,7 +473,7 @@ def get_leads_by_statuses(statuses: list[str]) -> list[dict]:
 def get_leads_needing_followup(today_str: str) -> list[dict]:
     """Retorna leads que precisam de follow-up hoje ou antes.
 
-    Filtra leads com estado em {contactado, followup_1, followup_2}
+    Filtra leads com estado em {contactado, followup_1, followup_2, followup_3}
     e com 'Proximo Follow-up' <= today_str (formato ISO: YYYY-MM-DD).
 
     Args:
@@ -485,7 +485,7 @@ def get_leads_needing_followup(today_str: str) -> list[dict]:
     try:
         ws = _get_worksheet_leads()
         records = ws.get_all_records()
-        followup_states = {"contactado", "followup_1", "followup_2"}
+        followup_states = {"contactado", "followup_1", "followup_2", "followup_3"}
         filtered = []
         for r in records:
             estado = r.get("Estado", "").strip().lower()

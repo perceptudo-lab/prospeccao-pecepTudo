@@ -11,11 +11,12 @@ from scraper.utils import setup_logger
 
 logger = setup_logger(__name__)
 
-# Dias entre cada touch
+# Dias entre cada touch (fallback generico)
 TOUCH_INTERVALS = {
     1: 3,   # apos touch 1 -> touch 2 em 3 dias
     2: 4,   # apos touch 2 -> touch 3 em 4 dias (dia 7)
     3: 7,   # apos touch 3 -> touch 4 em 7 dias (dia 14)
+    4: 16,  # apos touch 4 -> touch 5 em 16 dias (dia 30) — so contabilidade
 }
 
 # Estado actual -> proximo touch a enviar
@@ -23,6 +24,7 @@ STATE_TO_NEXT_TOUCH = {
     "contactado": 2,
     "followup_1": 3,
     "followup_2": 4,
+    "followup_3": 5,
 }
 
 
@@ -87,12 +89,13 @@ def get_followup_stats() -> dict:
     today_str = date.today().isoformat()
 
     # Leads em cada estagio de follow-up
-    followup_leads = get_leads_by_statuses(["contactado", "followup_1", "followup_2"])
+    followup_leads = get_leads_by_statuses(["contactado", "followup_1", "followup_2", "followup_3"])
 
     stats = {
         "contactado": 0,     # aguardam touch 2
         "followup_1": 0,     # aguardam touch 3
         "followup_2": 0,     # aguardam touch 4
+        "followup_3": 0,     # aguardam touch 5 (so contabilidade)
         "due_hoje": 0,       # com follow-up para hoje ou antes
         "total_pipeline": 0, # total em pipeline de follow-up
     }

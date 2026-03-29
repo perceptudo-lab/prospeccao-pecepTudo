@@ -407,9 +407,15 @@ def generate_outreach_message(
 
     except Exception as e:
         logger.error("Erro ao gerar outreach para '%s': %s", nome, e)
+        # Fallback generico — adapta ao nicho
+        FALLBACK_LABEL = {
+            "oficinas": "oficina",
+            "contabilidade": "gabinete",
+        }
+        label = FALLBACK_LABEL.get(nicho, "empresa")
         messages = [
             f"Bom dia, {nome}!",
-            f"Preparamos um diagnostico gratuito para a vossa oficina — com dados concretos do sector e oportunidades de melhoria. Segue em anexo.",
+            f"Preparamos um diagnostico gratuito para o vosso {label} — com dados concretos do sector e oportunidades de melhoria. Segue em anexo.",
         ]
 
     # Guardar mensagens no estado
@@ -422,6 +428,111 @@ def generate_outreach_message(
 
     logger.info("Outreach gerado para '%s': %d mensagens", nome, len(messages))
     return messages, conv_state
+
+
+def generate_followup_message(
+    nome: str, sector: str, touch: int, lead_data: dict,
+) -> list[str]:
+    """Gera mensagem de follow-up usando o agente especialista.
+
+    Cada agente tem a sua cadencia e conteudo especifico por touch:
+    - Rui (oficinas): dia 1=ANECRA, dia 3=processos, dia 7=chamadas, dia 14=porta aberta
+    - Marco (contabilidade): dia 1=OCC, dia 3=classificacao, dia 7=docs, dia 14=porta aberta, dia 30=Tally
+
+    Args:
+        nome: Nome da empresa.
+        sector: Sector/nicho.
+        touch: Numero do touch (2-5).
+        lead_data: Dados do lead.
+
+    Returns:
+        Lista de mensagens (1-2 msgs curtas).
+    """
+    nicho = _resolve_niche(sector)
+
+    # Contexto minimo para o system prompt
+    conv_state = {
+        "version": 2,
+        "phone": lead_data.get("telefone", ""),
+        "nome": nome,
+        "nicho": nicho,
+        "stage": "outreach",
+        "price_ask_count": 0,
+        "last_activity": datetime.now().isoformat(),
+        "lead_data": lead_data,
+        "messages": [],
+    }
+
+    system_prompt = _build_system_prompt(nicho, nome, conv_state)
+
+    # Instrucoes especificas por touch — forca o agente a seguir a SUA cadencia
+    TOUCH_INSTRUCTIONS = {
+        2: (
+            f"Gera a mensagem de follow-up DIA 1 (valor) para {nome}. "
+            f"Enviamos o PDF de diagnostico ontem. "
+            f"Segue EXACTAMENTE a tua cadencia de follow-up definida para o Dia 1. "
+            f"Usa o dado do sector que esta no teu prompt. "
+            f"Max 1 mensagem curta (2-3 linhas)."
+        ),
+        3: (
+            f"Gera a mensagem de follow-up DIA 3 (conteudo util) para {nome}. "
+            f"Enviamos o PDF ha 7 dias, follow-up ha 4 dias. Sem resposta. "
+            f"Segue EXACTAMENTE a tua cadencia de follow-up definida para o Dia 3. "
+            f"Max 1 mensagem curta (2-3 linhas)."
+        ),
+        4: (
+            f"Gera a mensagem de follow-up DIA 7 (reframe) para {nome}. "
+            f"Ja tentamos contacto 3 vezes sem resposta. "
+            f"Segue EXACTAMENTE a tua cadencia de follow-up definida para o Dia 7. "
+            f"Aborda um angulo diferente dos contactos anteriores. "
+            f"Max 1 mensagem curta (2-3 linhas)."
+        ),
+        5: (
+            f"Gera a mensagem de follow-up DIA 14 ou DIA 30 (porta aberta / reengagement) para {nome}. "
+            f"E o ultimo contacto. Sem resposta a todos os anteriores. "
+            f"Segue EXACTAMENTE a tua cadencia de follow-up para o ultimo toque. "
+            f"Respeitoso, sem pressao, porta aberta. "
+            f"Max 1 mensagem curta (2-3 linhas)."
+        ),
+    }
+
+    user_msg = TOUCH_INSTRUCTIONS.get(touch)
+    if not user_msg:
+        user_msg = (
+            f"Gera uma mensagem de follow-up para {nome}. "
+            f"Touch numero {touch}. Max 1 mensagem curta."
+        )
+
+    try:
+        client = _get_client()
+        response = client.chat.completions.create(
+            model=OPENAI_MODEL,
+            response_format={"type": "json_object"},
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_msg},
+            ],
+        )
+
+        parsed = _parse_gpt_response(
+            response.choices[0].message.content or "", "outreach"
+        )
+        messages = parsed["messages"]
+
+        # Adicionar opt-out footer a ultima mensagem
+        OPT_OUT = "\n\n_Para deixar de receber mensagens, responda PARAR._"
+        if messages:
+            messages[-1] = messages[-1] + OPT_OUT
+
+        logger.info(
+            "Follow-up touch %d gerado por agente para '%s': %d msgs",
+            touch, nome, len(messages),
+        )
+        return messages
+
+    except Exception as e:
+        logger.error("Erro ao gerar follow-up agente para '%s': %s", nome, e)
+        return [f"{nome}, o diagnostico que preparamos para si continua disponivel. Se tiver questoes, estamos por aqui.\n\n_Para deixar de receber mensagens, responda PARAR._"]
 
 
 def handle_incoming_message(phone: str, message: str) -> str | None:

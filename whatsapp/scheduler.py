@@ -16,7 +16,7 @@ from crm.sheets import (
     get_leads_needing_followup,
     update_lead_status,
 )
-from agentes.atendente import generate_outreach_message, has_niche_agent, _save_conversation_state, _send_split_messages
+from agentes.atendente import generate_outreach_message, generate_followup_message, has_niche_agent, _resolve_niche, _save_conversation_state, _send_split_messages
 from scraper.utils import setup_logger
 from whatsapp.message_generator import generate_message
 from whatsapp.sender import check_is_whatsapp, send_lead_message, send_pdf, send_text
@@ -34,13 +34,29 @@ PAUSA_MIN = int(os.getenv("PAUSA_MIN_SEG", "900"))
 PAUSA_MAX = int(os.getenv("PAUSA_MAX_SEG", "1800"))
 MAX_ENVIOS_DIA = int(os.getenv("MAX_ENVIOS_DIA", "80"))
 
-# Mapeamento de estados: estado actual -> proximo estado apos envio
+# Mapeamento base de estados: estado actual -> proximo estado apos envio
 NEXT_STATE = {
     "pronto_para_envio": "contactado",
     "contactado": "followup_1",
     "followup_1": "followup_2",
-    "followup_2": "frio",
+    "followup_2": "followup_3",
+    "followup_3": "frio",
 }
+
+
+def _get_next_state(estado_actual: str, nicho: str = "") -> str:
+    """Retorna o proximo estado com base no nicho.
+
+    Oficinas (4 toques): followup_2 → frio
+    Contabilidade (5 toques): followup_2 → followup_3 → frio
+    """
+    max_touches = NICHE_MAX_TOUCHES.get(nicho, DEFAULT_MAX_TOUCHES)
+
+    # Para nichos com 4 toques, followup_2 e o ultimo → frio
+    if max_touches == 4 and estado_actual == "followup_2":
+        return "frio"
+
+    return NEXT_STATE.get(estado_actual, "contactado")
 
 # Mapeamento de estado -> numero do touch que vai ser enviado
 STATE_TO_TOUCH = {
@@ -48,14 +64,41 @@ STATE_TO_TOUCH = {
     "contactado": 2,
     "followup_1": 3,
     "followup_2": 4,
+    "followup_3": 5,
 }
 
-# Intervalos entre follow-ups (dias apos cada touch)
-FOLLOWUP_INTERVALS = {
-    1: 3,   # touch 1 enviado -> follow-up em 3 dias
-    2: 4,   # touch 2 enviado -> follow-up em 4 dias (dia 7)
-    3: 7,   # touch 3 enviado -> follow-up em 7 dias (dia 14)
+# Cadencia de follow-ups por nicho (dias apos cada touch)
+# Rui (oficinas): 4 toques — dia 0, 3, 7, 14 → frio
+# Marco (contabilidade): 5 toques — dia 0, 3, 7, 14, 30 → frio
+NICHE_FOLLOWUP_INTERVALS = {
+    "oficinas": {
+        1: 3,   # touch 1 -> touch 2 em 3 dias
+        2: 4,   # touch 2 -> touch 3 em 4 dias (dia 7)
+        3: 7,   # touch 3 -> touch 4 em 7 dias (dia 14)
+        # touch 4 = ultimo → frio
+    },
+    "contabilidade": {
+        1: 3,   # touch 1 -> touch 2 em 3 dias
+        2: 4,   # touch 2 -> touch 3 em 4 dias (dia 7)
+        3: 7,   # touch 3 -> touch 4 em 7 dias (dia 14)
+        4: 16,  # touch 4 -> touch 5 em 16 dias (dia 30)
+        # touch 5 = ultimo → frio
+    },
 }
+
+# Fallback para nichos sem cadencia especifica
+DEFAULT_FOLLOWUP_INTERVALS = {
+    1: 3,
+    2: 4,
+    3: 7,
+}
+
+# Nichos onde touch 4 NAO e o ultimo (tem touch 5)
+NICHE_MAX_TOUCHES = {
+    "oficinas": 4,
+    "contabilidade": 5,
+}
+DEFAULT_MAX_TOUCHES = 4
 
 
 def _is_within_window() -> bool:
@@ -70,16 +113,18 @@ def _parse_time(time_str: str) -> datetime:
     return datetime.now().replace(hour=int(h), minute=int(m), second=0, microsecond=0)
 
 
-def _next_followup_date(touch_sent: int) -> str | None:
+def _next_followup_date(touch_sent: int, nicho: str = "") -> str | None:
     """Calcula data ISO do proximo follow-up apos enviar um touch.
 
     Args:
-        touch_sent: Touch que acabou de ser enviado (1-4).
+        touch_sent: Touch que acabou de ser enviado.
+        nicho: Nicho resolvido (ex: 'oficinas', 'contabilidade').
 
     Returns:
-        Data ISO (YYYY-MM-DD) ou None se nao ha proximo follow-up.
+        Data ISO (YYYY-MM-DD) ou None se foi o ultimo touch.
     """
-    interval = FOLLOWUP_INTERVALS.get(touch_sent)
+    intervals = NICHE_FOLLOWUP_INTERVALS.get(nicho, DEFAULT_FOLLOWUP_INTERVALS)
+    interval = intervals.get(touch_sent)
     if not interval:
         return None
     return (date.today() + timedelta(days=interval)).isoformat()
@@ -213,26 +258,39 @@ def send_daily_batch(dry_run: bool = False) -> dict:
             stats["saltados"] += 1
             continue
 
-        # Touch 1 + agente especialista: Rui/Nuno gera outreach
-        use_agent = touch == 1 and has_niche_agent(sector)
+        # Agente especialista gera TODOS os toques (outreach + follow-ups)
+        use_agent = has_niche_agent(sector)
 
-        if use_agent:
+        lead_data = {
+            "telefone": telefone,
+            "cidade": lead.get("Cidade", ""),
+            "rating": str(lead.get("Rating", "")),
+            "reviews": str(lead.get("Reviews", "")),
+            "website": lead.get("Website", ""),
+            "instagram": lead.get("Instagram", ""),
+        }
+
+        if use_agent and touch == 1:
+            # Touch 1: outreach + PDF
             try:
-                lead_data = {
-                    "telefone": telefone,
-                    "cidade": lead.get("Cidade", ""),
-                    "rating": str(lead.get("Rating", "")),
-                    "reviews": str(lead.get("Reviews", "")),
-                    "website": lead.get("Website", ""),
-                    "instagram": lead.get("Instagram", ""),
-                }
                 msgs, conv_state = generate_outreach_message(nome, sector, lead_data)
-                mensagem = " | ".join(msgs)  # Para logs/Sheets
+                mensagem = " | ".join(msgs)
             except Exception as e:
                 logger.error("Erro ao gerar outreach agente para '%s': %s", nome, e)
                 stats["erros"] += 1
                 continue
+        elif use_agent and touch >= 2:
+            # Follow-ups: agente segue a SUA cadencia especifica
+            try:
+                msgs = generate_followup_message(nome, sector, touch, lead_data)
+                mensagem = " | ".join(msgs)
+                conv_state = None
+            except Exception as e:
+                logger.error("Erro ao gerar follow-up agente para '%s': %s", nome, e)
+                stats["erros"] += 1
+                continue
         else:
+            # Nichos sem agente: gerador generico
             try:
                 mensagem = generate_message(nome, sector, touch=touch)
                 msgs = [mensagem]
@@ -242,12 +300,15 @@ def send_daily_batch(dry_run: bool = False) -> dict:
                 stats["erros"] += 1
                 continue
 
+        # Resolver nicho para cadencia de follow-up
+        nicho = _resolve_niche(sector)
+
         if dry_run:
             count_enviados += 1
             stats["enviados"] += 1
             estado_actual = lead.get("Estado", "").strip().lower()
-            novo_estado = NEXT_STATE.get(estado_actual, "contactado")
-            proximo_followup = _next_followup_date(touch)
+            novo_estado = _get_next_state(estado_actual, nicho)
+            proximo_followup = _next_followup_date(touch, nicho)
             agent_label = " [AGENTE]" if use_agent else ""
             print(f"    [DRY-RUN]{agent_label} {len(msgs)} msg(s):")
             for m in msgs:
@@ -271,10 +332,10 @@ def send_daily_batch(dry_run: bool = False) -> dict:
                 count_enviados += 1
                 stats["enviados"] += 1
 
-                # Calcular proximo estado e follow-up
+                # Calcular proximo estado e follow-up (por nicho)
                 estado_actual = lead.get("Estado", "").strip().lower()
-                novo_estado = NEXT_STATE.get(estado_actual, "contactado")
-                proximo_followup = _next_followup_date(touch)
+                novo_estado = _get_next_state(estado_actual, nicho)
+                proximo_followup = _next_followup_date(touch, nicho)
 
                 extra_data = {
                     "data_contacto": datetime.now().strftime("%Y-%m-%d %H:%M"),

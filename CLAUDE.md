@@ -10,7 +10,7 @@ Sistema de prospeccao automatica para a PercepTudo, uma consultoria de inteligen
 
 2. **Geracao de PDF** (barata, sem IA) — `python main.py gerar --nicho X --cidade Y`. Template HTML fixo por nicho, so substitui {NOME_EMPRESA}, {WEBSITE}, {INSTAGRAM}. Playwright converte para PDF.
 
-3. **Envio + Atendimento** (automatico) — `python main.py enviar-dia`. Scheduler envia mensagens (GPT-5 gera variacao) + PDF na janela 9-13h, max 80/dia. Agente especialista (Rui/Nuno) responde 24/7 quando o lead responde.
+3. **Envio + Atendimento** (automatico) — `python main.py enviar-dia`. Scheduler envia mensagens (GPT-5 gera variacao) + PDF na janela 9-13h, max 80/dia. Agente especialista (Rui/Marco) responde 24/7 quando o lead responde.
 
 ## Stack
 
@@ -49,15 +49,17 @@ perceptudo-prospector/
 │   ├── oficinas/
 │   │   └── system_prompt.md     # Agente Rui — especialista oficinas (378+ linhas)
 │   └── contabilidade/
-│       ├── personalidade.md     # Agente Nuno — tom e vocabulario (formato antigo)
-│       ├── conhecimento.md      # Servicos PercepTudo para contabilidade
-│       └── objecoes.md          # Objecoes comuns + respostas
+│       ├── system_prompt.md     # Agente Marco — especialista contabilidade (456+ linhas)
+│       ├── personalidade.md     # DEPRECATED — formato antigo
+│       ├── conhecimento.md      # DEPRECATED — formato antigo
+│       └── objecoes.md          # DEPRECATED — formato antigo
 │
 ├── pdf/
 │   ├── html_generator.py        # Template fixo → {NOME_EMPRESA} → Playwright → PDF
 │   ├── orchestrator.py          # Batch: busca Sheets → gera PDFs → actualiza estado
 │   └── templates/
-│       └── contabilidade.html   # Template contabilidade (9 paginas)
+│       ├── contabilidade.html   # Template contabilidade (9 paginas)
+│       └── oficinas.html        # Template oficinas (9 paginas)
 │
 ├── whatsapp/
 │   ├── sender.py                # Envia texto + PDF via Evolution API
@@ -108,7 +110,7 @@ python main.py enviar-dia
      |
      v
 Scheduler (janela 9-13h, max 80/dia, intervalos 3-7min):
-  - Se nicho tem agente especialista → Rui/Nuno gera outreach
+  - Se nicho tem agente especialista → Rui/Marco gera outreach
   - Se nao → message_generator generico
   - Touch 1: mensagem + PDF
   - Follow-ups: dia 3, 7, 14 (so texto)
@@ -137,15 +139,19 @@ O system prompt COMPLETO esta em `agentes/{nicho}/system_prompt.md`.
 - Sabe o que esta no PDF (4 dores + solucoes)
 - Escalacao com gatilhos especificos (preco 2x, alto valor >3 baias, etc)
 
-### Agente Nuno (contabilidade) — POR MIGRAR
-- Tem knowledge base em 3 ficheiros (formato antigo, funcional)
-- Precisa de system_prompt.md completo como o Rui
+### Agente Marco (contabilidade) — ACTIVO
+- Especialista em gabinetes de contabilidade
+- Conhece: IVA, IRC, IES, SNC, SAF-T, reconciliação bancária, Sage/Primavera/PHC
+- Metodo SPIN adaptado a contabilidade
+- Sabe dores do sector (classificação manual, clientes que não entregam docs, picos fiscais)
+- Escalacao com gatilhos especificos (preco 2x, irritado, proposta formal, gabinete >200 clientes)
+- Concorrentes: Tally, Rauva, CentralGest, TOConline
 
 ### Aliases de nicho
 | Termos no Sheets | Agente | Template PDF |
 |-----------------|--------|-------------|
 | oficinas, oficina, oficina de automoveis, mecanica, auto | Rui | oficinas.html |
-| contabilidade, contabilista, contabilistas, gabinete de contabilidade | Nuno | contabilidade.html |
+| contabilidade, contabilista, contabilistas, gabinete de contabilidade | Marco | contabilidade.html |
 
 ## Estado de Conversa (v2)
 
@@ -185,8 +191,10 @@ novo → pronto_para_envio → contactado → followup_1 → followup_2 → foll
 - Pausa: 15-30 min a cada 10 mensagens
 - Prioridade: follow-ups primeiro, depois novos leads
 - Validacao WhatsApp antes de enviar (check_is_whatsapp)
-- Follow-ups: touch 2 (dia 3), touch 3 (dia 7), touch 4 (dia 14) → frio
-- PDF so no touch 1; touches 2-4 so texto
+- Follow-ups por nicho:
+  - Oficinas (Rui): 4 toques — dia 0, 3, 7, 14 → frio
+  - Contabilidade (Marco): 5 toques — dia 0, 3, 7, 14, 30 → frio
+- PDF so no touch 1; touches seguintes so texto
 
 ## Deploy (Easypanel)
 
