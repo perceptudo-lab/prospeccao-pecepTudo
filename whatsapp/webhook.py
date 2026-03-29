@@ -26,7 +26,7 @@ logger = setup_logger(__name__)
 app = Flask(__name__)
 
 # Tempo de espera por mais mensagens antes de processar (segundos)
-BUFFER_WAIT = float(os.getenv("BUFFER_WAIT_SEG", "8"))
+BUFFER_WAIT = float(os.getenv("BUFFER_WAIT_SEG", "15"))
 
 # Buffer de mensagens por telefone
 # {phone: {"messages": ["msg1", "msg2"], "timer": threading.Timer}}
