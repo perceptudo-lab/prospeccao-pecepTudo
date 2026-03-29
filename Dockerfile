@@ -17,7 +17,7 @@ COPY . .
 # Criar directorio de output
 RUN mkdir -p output/leads output/conversas
 
-EXPOSE 5001
+EXPOSE 80
 
-# Default: agente atendente (webhook server)
-CMD ["python", "main.py", "agente", "--port", "5001"]
+# Default: agente atendente (webhook server na porta 80)
+CMD ["python", "main.py", "agente", "--port", "80"]
