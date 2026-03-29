@@ -1,0 +1,52 @@
+## Contexto: Sector de Restauracao em Portugal
+
+### Benchmarks reais do sector
+
+**Custos operacionais tipicos:**
+- Custo de mao-de-obra: 25-35% da faturacao
+- Custo de materia-prima (food cost): 28-35% da faturacao
+- Desperdicio alimentar medio: 10-15% das compras
+- Margem liquida media: 5-12%
+
+**Tempos operacionais tipicos (PME, 10-50 funcionarios):**
+- Gestao de reservas: 3-6h/semana
+- Gestao de inventario/stock: 4-8h/semana
+- Contabilidade e facturacao: 3-5h/semana
+- Gestao de redes sociais: 2-5h/semana
+- Resposta a reviews e mensagens: 2-4h/semana
+- Planeamento de menus e precos: 2-3h/semana
+- Gestao de fornecedores/encomendas: 3-5h/semana
+- Formacao de equipa: 2-4h/semana
+- Total estimado em tarefas administrativas: 20-40h/semana
+
+**Custo hora medio:**
+- Gerente/dono: 15-25 EUR/hora
+- Funcionario administrativo: 8-12 EUR/hora
+
+### Oportunidades tipicas de IA para restauracao
+
+1. **Automatizacao de reservas** — sistemas de booking com confirmacao automatica, reducao de no-shows com lembretes
+2. **Gestao de inventario inteligente** — previsao de consumo baseada em historico, reducao de desperdicio
+3. **Resposta automatica a reviews** — respostas personalizadas a reviews Google/TripAdvisor
+4. **Optimizacao de menu** — analise de margens por prato, sugestao de precos baseada em dados
+5. **Gestao de redes sociais** — agendamento e criacao de conteudo assistida
+6. **Facturacao e contabilidade** — automatizacao de lancamentos, reconciliacao automatica
+7. **Gestao de fornecedores** — comparacao automatica de precos, encomendas automaticas
+
+### Benchmarks de ROI (conservadores, ja com reducao de 30%)
+
+- Automatizacao de reservas: poupa 2-4h/semana
+- Gestao de inventario com IA: reduz desperdicio em 15-25%
+- Resposta a reviews automatica: poupa 1-3h/semana
+- Optimizacao de menu: aumenta margem em 2-5%
+- Gestao de redes sociais: poupa 1-3h/semana
+
+### Dores comuns do sector
+
+- Falta de tempo para tudo (dono faz tudo)
+- Desperdicio alimentar elevado
+- Dificuldade em gerir reservas (telefone, WhatsApp, email)
+- Reviews negativas sem resposta
+- Redes sociais abandonadas ou inconsistentes
+- Dificuldade em manter equipa (rotatividade alta)
+- Precos de fornecedores sempre a subir sem analise comparativa

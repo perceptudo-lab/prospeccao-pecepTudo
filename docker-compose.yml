@@ -1,0 +1,34 @@
+version: "3.8"
+
+services:
+  # Agente atendente — webhook server 24/7
+  agente:
+    build: .
+    container_name: perceptudo-agente
+    ports:
+      - "5001:5001"
+    env_file: .env
+    volumes:
+      - ./output:/app/output
+      - ./pdf/templates:/app/pdf/templates
+      - ./agentes:/app/agentes
+    restart: unless-stopped
+    command: python main.py agente --port 5001
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Scheduler — envio diario (cron as 9:00)
+  scheduler:
+    build: .
+    container_name: perceptudo-scheduler
+    env_file: .env
+    volumes:
+      - ./output:/app/output
+      - ./pdf/templates:/app/pdf/templates
+    restart: "no"
+    command: python main.py enviar-dia
+    profiles:
+      - cron

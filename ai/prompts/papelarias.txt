@@ -1,0 +1,57 @@
+## Contexto: Sector de Papelarias em Portugal
+
+### Benchmarks reais do sector
+
+**Custos operacionais tipicos:**
+- Compras de mercadorias (COGS): 60-68% da faturação
+- Pessoal (salários + encargos): 15-20%
+- Rendas/condomínio: 6-10%
+- Logística e armazém (transportes, embalagens, quebras): 1,5-3,0%
+- Energia, TI e comunicações (POS/ERP/e‑commerce): 1,0-2,0%
+
+**Tempos operacionais tipicos (PME, 10-50 funcionarios):**
+- Gestão de stocks e encomendas a fornecedores: 10-16 h/semana
+- Receção, conferência e etiquetagem de mercadoria: 8-12 h/semana
+- Atualização de preços e promoções no POS/e‑commerce: 4-8 h/semana
+- Faturação, lançamentos e reconciliações (contabilidade/AT): 6-10 h/semana
+- Atendimento pós‑venda e suporte (telefone/email/chat): 5-9 h/semana
+- Planeamento de escalas e processamento salarial: 4-6 h/semana
+- Marketing digital e redes sociais: 5-9 h/semana
+- Gestão de campanhas sazonais (ex.: regresso às aulas): 6-12 h/semana
+- Gestão de catálogo e conteúdos no site/marketplaces: 4-7 h/semana
+- Relatórios de vendas e análise de margem: 3-6 h/semana
+- Total estimado em tarefas administrativas: 55-95 h/semana
+
+**Custo hora medio:**
+- Administrativo/Backoffice: 11-16 €/h (custo total para a empresa)
+- Gestor de loja/Operações: 14-20 €/h
+- Técnico de e‑commerce/Marketing digital: 16-24 €/h
+
+### Oportunidades tipicas de IA para papelarias
+
+1. **Previsão de procura e reposição automática**: ajustar encomendas por SKU com base em histórico, sazonalidade e meteo/localização.
+2. **Leitura e reconciliação de documentos**: extração de dados de faturas/CMR e matching automático com encomendas e pagamentos.
+3. **Atendimento ao cliente com assistente omnicanal**: resposta a FAQs, estado de encomendas e política de trocas por chat/WhatsApp/email.
+4. **Gestão de catálogo e conteúdos**: geração/normalização de descrições, atributos e imagens otimizadas para SEO/marketplaces.
+5. **Otimização de preços e promoções**: sugestões dinâmicas por elasticidade, concorrência local e stock disponível.
+6. **Relatórios automáticos e alertas**: dashboards diários de vendas/margem, deteção de anomalias e alertas de rutura/excesso.
+7. **Triagem de candidaturas e onboarding**: screening inicial, criação de manuais e micro‑formações para novos colaboradores.
+
+### Benchmarks de ROI (conservadores, ja com reducao de 30%)
+
+- Reconciliação automática de faturas e pagamentos: poupança de 2-4 h/semana na equipa financeira (redução de 25-35% do tempo).
+- Atendimento com assistente IA: desvio de 14-21% dos pedidos repetitivos, poupando 1-2 h/semana em suporte.
+- Gestão de catálogo/conteúdos assistida: poupança de 2-4 h/semana (redução de 18-28% no tempo de criação/atualização).
+- Relatórios automáticos e alertas: poupança de 1-3 h/semana na preparação de reporting (redução de 28-42%).
+- Previsão de procura e reposição: redução de rutura/excesso em 6-10%, libertando 3-5% do capital em stock.
+
+### Dores comuns do sector
+
+- Margens comprimidas face a grandes retalhistas e marketplaces
+- Sazonalidade acentuada (ex.: regresso às aulas) e previsão de procura incerta
+- Gestão complexa de milhares de SKUs, com risco de rutura e excesso de stock
+- Integrações frágeis entre POS, ERP, fornecedores e e‑commerce
+- Processos manuais em faturação, SAF‑T, reconciliações e inventários
+- Pressão de rendas em zonas urbanas e variação de tráfego pedonal
+- Rotatividade de pessoal e necessidade de formação contínua em loja
+- Dependência de fornecedores internacionais e prazos de entrega variáveis

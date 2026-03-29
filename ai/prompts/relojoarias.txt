@@ -1,0 +1,56 @@
+## Contexto: Sector de Relojoarias em Portugal
+
+### Benchmarks reais do sector
+
+**Custos operacionais tipicos:**
+- Compras/CMV: 50-60% da faturacao
+- Pessoal (salarios + encargos): 13-17% da faturacao
+- Rendas/condominio (lojas de rua/centros comerciais): 8-11% da faturacao
+- Marketing e canais digitais (offline/online): 2-4% da faturacao
+- Comissoes de pagamento (TPA/e-commerce) e servicos bancarios: 1,5-2,5% da faturacao
+
+**Tempos operacionais tipicos (PME, 10-50 funcionarios):**
+- Gestao de stock e inventarios: 5-8h/semana
+- Encomendas a fornecedores e rececao de mercadoria: 4-6h/semana
+- Faturacao, reconciliacao e lancamentos contabilisticos: 6-9h/semana
+- Processamento salarial e gestao de horarios/folgas: 3-5h/semana
+- Atendimento pos-venda (garantias, reparacoes, follow-up): 5-8h/semana
+- Gestao de e-commerce/marketplaces (listagens, precos, envios): 4-7h/semana
+- Marketing e redes sociais: 3-5h/semana
+- Relatorios de vendas e analise de KPIs: 2-4h/semana
+- Conformidade fiscal/AT e arquivo documental: 2-3h/semana
+- Logistica, consumiveis e devolucoes: 2-4h/semana
+- Total estimado em tarefas administrativas: 36-49h/semana
+
+**Custo hora medio:**
+- Assistente administrativo/loja (custo total empresa): 11-16 €/h
+- Tecnico de relojoaria (reparacao/servico): 17-25 €/h
+- Gestor de loja/operacoes: 15-22 €/h
+
+### Oportunidades tipicas de IA para relojoarias
+
+1) Previsao de procura e reposicao assistida: ajustar compras por modelo/marca, reduzindo ruturas e excesso de stock.
+2) Otimizacao de sortido e precificacao: identificar referencias de baixa rotacao e margens, e sugerir precos/packaging.
+3) Captura e validacao de faturas (OCR+RPA): extrair dados de PDFs/TPA, reconciliar com ERP e bancos automaticamente.
+4) Assistente virtual omnicanal: responder a FAQs, estados de reparacao/garantia e agendar servicos via chat/WhatsApp.
+5) Producao de conteudos e campanhas: gerar descricoes, titulos, criativos e emails segmentados com base no CRM.
+6) Planeamento de horarios e dimensionamento: prever afluencia por loja/dia e propor escalas otimizadas.
+
+### Benchmarks de ROI (conservadores, ja com reducao de 30%)
+
+- Faturacao e reconciliacao automatizadas (OCR+RPA): poupanca de 3-5h/semana por loja; erros manuais -15-25%.
+- Assistente virtual para pos-venda/garantias: desvio de 20-30% dos contactos; poupanca de 4-6h/semana.
+- Previsao de procura e reposicao: ruturas -8-12%; excesso de stock -6-9%; tempo de planeamento -2-3h/semana.
+- Conteudos para e-commerce/anuncios: poupanca de 2-3h/semana; tempo de aprovacao de criativos -25-35%.
+- Analise de margens e ajuste de precos: melhoria de margem bruta de +0,5-1,0 pp em linhas selecionadas; analise -1-2h/semana.
+
+### Dores comuns do sector
+
+- Capital imobilizado elevado em stock e risco de obsolescencia de colecoes.
+- Dependencia de marcas e prazos de fornecimento longos/variaveis.
+- Pressao de margens por marketplaces e campanhas sazonais.
+- Gestao complexa de garantias, reparacoes, pecas e prazos com fabricantes.
+- Afluencia irregular e sazonalidade acentuada (Natal, datas comemorativas).
+- Custos elevados de localizacao premium (centros urbanos/shopping).
+- Escassez de tecnicos relojoeiros qualificados e formacao especializada.
+- Sincronizacao omnicanal (loja, e-commerce, marketplaces) e erros de stock/precos.

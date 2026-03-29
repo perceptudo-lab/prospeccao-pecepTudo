@@ -1,0 +1,67 @@
+## Contexto: Sector de Ferragens em Portugal
+
+### Benchmarks reais do sector
+
+**Custos operacionais tipicos:**
+- Custo de Mercadorias Vendidas (CMV): 62-72% da faturação
+- Pessoal (salários + encargos sociais): 10-16%
+- Rendas/instalações (loja + armazém): 2-5%
+- Logística e transporte (combustível, estafetas, frota): 1.5-3%
+- Energia, manutenção e consumíveis técnicos: 1-2.5%
+
+**Tempos operacionais tipicos (PME, 10-50 funcionarios):**
+- Gestão de encomendas a fornecedores: 6-10h/semana
+- Receção, conferência e lançamento de faturas de compra: 5-8h/semana
+- Faturação, guias e contas a receber/cobrança: 5-9h/semana
+- Conciliações bancárias e tesouraria: 3-5h/semana
+- Gestão de stocks (inventário rotativo, reposição, etiquetagem): 5-9h/semana
+- Atualização de preços/catálogos (ERP e e-commerce): 3-5h/semana
+- Orçamentação e atendimento B2B (obras, carpintarias, serralharias): 4-7h/semana
+- Gestão de devoluções, garantias e não conformidades: 2-4h/semana
+- Recursos Humanos (registos, férias, folha, SST): 3-5h/semana
+- Reporting e obrigações fiscais (SAF-T, IVA, IES): 3-5h/semana
+- Total estimado em tarefas administrativas: 39-67h/semana
+
+**Custo hora medio:**
+- Administrativo/Financeiro (incl. encargos): 11-16 €/h
+- Técnico de Armazém/Expedição (incl. encargos): 9-13 €/h
+- Gestor de Loja/Compras (incl. encargos): 16-22 €/h
+
+### Oportunidades tipicas de IA para ferragens
+
+1) Identificação de procura e reposição assistida por IA
+- Previsão de vendas por SKU e sugestão de encomendas por ponto de reposição, sazonalidade e lead-time.
+
+2) Lançamento automático de documentos (OCR/EDI)
+- Extração e reconciliação de faturas/Guias, validação de preços e integrações com ERP.
+
+3) Assistente de orçamentação B2B
+- Geração de propostas a partir de pedidos por email/WhatsApp, com alternativas de SKU e prazos.
+
+4) Otimização de preços e margens
+- Sugestões de preços por elasticidade, concorrência local/online e rotatividade de SKU.
+
+5) Enriquecimento e classificação de catálogo
+- Normalização de descrições, mapeamento EAN/fornecedor e criação de atributos técnicos.
+
+6) Atendimento e pós-venda assistido
+- Chat/voz para dúvidas técnicas, compatibilidades, devoluções e garantias, integrado em POS/e-commerce.
+
+### Benchmarks de ROI (conservadores, ja com reducao de 30%)
+
+- Lançamento automático de faturas/Guias (OCR/EDI): poupança de 6-10h/semana e redução de 25-40% em erros de lançamento
+- Previsão de reposição: redução de 8-12% no stock médio e de 10-18% em ruturas de stock
+- Assistente de orçamentação B2B: redução de 25-35% no tempo de resposta e aumento de 2-4 p.p. na taxa de conversão
+- Otimização de preços: melhoria de 1-2 p.p. na margem bruta em linhas de cauda longa em 3-6 meses
+- Picking e rotas de entrega: redução de 12-20% no tempo de picking/entrega em operações com frota própria
+
+### Dores comuns do sector
+
+- Margens comprimidas por concorrência local e marketplaces
+- Rotatividade alta em consumíveis e ruturas em SKUs de alta rotação
+- Obsolescência e capital empatado em cauda longa de catálogo
+- Integrações frágeis entre ERP, POS e e-commerce (dados inconsistentes/EANs divergentes)
+- Processamento manual moroso de faturas, guias e ficheiros SAF-T
+- Prazos de pagamento extensos no B2B e pressão de tesouraria
+- Volatilidade de tabelas de preço de fornecedores e mudanças frequentes
+- Dificuldade em recrutar/reter perfis técnicos de armazém e vendedores especializados

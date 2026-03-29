@@ -1,0 +1,57 @@
+## Contexto: Sector de Lojas De Tapetes em Portugal
+
+### Benchmarks reais do sector
+
+**Custos operacionais tipicos:**
+- Custo das mercadorias vendidas (compra a grossistas/importadores): 58-68% da faturação
+- Pessoal (vendas, armazém, entregas/instalação): 12-17%
+- Ocupação (renda de loja/showroom, condomínio, seguros): 6-10%
+- Logística e serviços (transporte, montagem, instalações): 3-6%
+- Marketing e meios de pagamento (publicidade, marketplaces, TPAs): 2-5%
+
+**Tempos operacionais tipicos (PME, 10-50 funcionarios):**
+- Gestão de stock, inventário e encomendas: 9-13h/semana
+- Compras e negociação com fornecedores/importação: 7-11h/semana
+- Faturação, contas a receber/pagar e reconciliações: 9-13h/semana
+- Agendamento de entregas e instalações/rotas: 7-11h/semana
+- Atendimento pós-venda, garantias e devoluções: 6-9h/semana
+- Gestão de e-commerce/catálogo (preços, descrições, fotos): 6-10h/semana
+- Marketing digital e redes sociais: 5-8h/semana
+- RH (escalas, admissões, processamento salarial): 4-7h/semana
+- Controlo de caixa/POS e fechos diários: 5-7h/semana
+- Reporting, KPIs e planeamento: 4-6h/semana
+- Total estimado em tarefas administrativas: 62-95h/semana
+
+**Custo hora medio:**
+- Administrativo/financeiro: 11-16 €/h
+- Técnico de entregas e instalação: 12-18 €/h
+- Gestor de e-commerce/marketing: 14-22 €/h
+
+### Oportunidades tipicas de IA para lojas de tapetes
+
+1) Conversação e triagem de leads com assistentes digitais em site/WhatsApp (FAQs, medidas, prazos, financiamento)  
+2) Automação de faturação e reconciliações (extração de PDFs, correspondência de encomendas, alertas de discrepâncias)  
+3) Previsão de procura e reposição automática por SKU (sazonalidade, tendências locais, prazos de importação)  
+4) Otimização de rotas e janelas de entrega/instalação com IA (capacidade, tráfego, SLA)  
+5) Gestão de catálogo assistida (geração de descrições, etiquetas de materiais/estilos via visão, normalização de preços)  
+6) Deteção de anomalias em margens e fraudes no POS (alertas de descontos atípicos, devoluções repetidas)  
+7) Recomendação de produtos e bundles (tapete + underlay + serviços) com base no perfil do cliente
+
+### Benchmarks de ROI (conservadores, ja com reducao de 30%)
+
+- Automação de faturação e reconciliações: poupança de 5-8h/semana (equipa administrativa)  
+- Atendimento e pós-venda com assistente digital: poupança de 4-6h/semana (triagem e FAQs)  
+- Gestão de catálogo e conteúdos: poupança de 3-5h/semana (criação/atualização de descrições e preços)  
+- Otimização de rotas e agendamentos: redução de 7-11% em kms/tempo de deslocação (combustível e horas)  
+- Previsão de procura e encomendas: redução de 6-10% de stock imobilizado (melhor rotação e menos ruturas)
+
+### Dores comuns do sector
+
+- Elevada dependência de importação (Turquia, Índia, Marrocos) com prazos de entrega longos e variáveis  
+- Capital imobilizado em stock lento e coleções sazonais difíceis de escoar  
+- Produtos volumosos e pesados, com entregas/instalações complexas e custos logísticos elevados  
+- Inconsistência de cores/tamanhos entre lotes, gerando devoluções e retrabalho  
+- Pressão de margens por concorrência online e marketplaces, com clientes muito sensíveis a preço  
+- Baixa digitalização de processos (catálogo, preços, encomendas), levando a erros manuais  
+- Dificuldade em prever procura local e tendências de decoração, originando ruturas ou excesso de stock  
+- Gestão de pós-venda exigente (manchas, desgaste, garantias) que consome tempo das equipas

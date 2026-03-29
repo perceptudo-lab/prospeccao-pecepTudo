@@ -1,0 +1,57 @@
+## Contexto: Sector de Talhos em Portugal
+
+### Benchmarks reais do sector
+
+**Custos operacionais tipicos:**
+- Custo de mercadoria (carne e miudezas): 58-66% das receitas
+- Pessoal (talhantes, atendimento, administrativo): 12-17% das receitas
+- Renda/arrendamento e condomínio: 4-7% das receitas
+- Energia (frio, vitrines, câmaras): 3-5% das receitas
+- Desperdício e quebras (validade, quebras de frio, trims): 2-4% das receitas
+
+**Tempos operacionais tipicos (PME, 10-50 funcionarios):**
+- Encomendas e receção de mercadorias: 3-5h/semana
+- Gestão de stocks, inventário e validade: 4-7h/semana
+- Registos HACCP/ASAE (temperaturas, limpeza, rastreabilidade): 4-6h/semana
+- Faturação, emissão de guias e arquivo: 2-4h/semana
+- Reconciliação de pagamentos e tesouraria: 2-3h/semana
+- RH (escalas, horas, processamento salarial): 3-5h/semana
+- Atendimento de encomendas (telefone/online) e CRM: 2-4h/semana
+- Rotulagem e atualização de preços: 2-3h/semana
+- Negociação com fornecedores e análise de margens: 1-3h/semana
+- Marketing local e redes sociais: 1-2h/semana
+- Total estimado em tarefas administrativas: 24-42h/semana
+
+**Custo hora medio:**
+- Assistente administrativo (custo total empregador): 10-14 €/h
+- Talhante qualificado (custo total empregador): 12-18 €/h
+- Gestor de loja/operacoes (custo total empregador): 16-24 €/h
+
+### Oportunidades tipicas de IA para talhos
+
+1. **Previsão de vendas e compras** - Antecipar procura por corte/dia da semana para reduzir ruturas e excesso de stock.
+2. **Otimização de preços e promoções** - Sugerir descontos dinâmicos em artigos com validade curta para proteger margens.
+3. **Automação de faturas e reconciliação** - OCR e classificação automática de faturas/guia de remessa e matching com pagamentos.
+4. **Assistente de encomendas ao cliente** - Chat/WhatsApp para orçamentos, encomendas repetidas e dúvidas frequentes.
+5. **Planeamento de escalas** - Geração de turnos alinhados a picos de procura e competências (desmancha/atendimento).
+6. **Monitorização inteligente de frio** - Alertas preditivos de anomalias e preenchimento automático de registos de temperatura.
+7. **Análise de margens por corte e fornecedor** - Relatórios de rentabilidade com recomendações de mix de produto.
+
+### Benchmarks de ROI (conservadores, ja com reducao de 30%)
+
+- OCR e reconciliação de faturas: poupanca de 3-5h/semana
+- Previsão de compras: redução de desperdício de 3-5%
+- Assistente de encomendas/FAQ: poupanca de 2-4h/semana
+- Planeamento automático de escalas: poupanca de 1-2h/semana
+- Monitorização de frio com alertas: redução de perdas por quebras de 4-6%
+
+### Dores comuns do sector
+
+- Margens apertadas e forte volatilidade do preço da carne
+- Desperdício elevado devido a prazos de validade curtos e quebras de frio
+- Dificuldade em recrutar e reter talhantes qualificados
+- Carga regulatória (HACCP, ASAE, rotulagem) e registos manuais morosos
+- Dependência de poucos fornecedores e variação de qualidade
+- Procura sazonal e picos ao fim de semana que exigem planeamento fino
+- Processos administrativos fragmentados e pouco digitalizados
+- Custos energéticos elevados com necessidade de frio contínuo

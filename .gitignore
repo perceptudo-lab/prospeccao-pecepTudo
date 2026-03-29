@@ -1,0 +1,29 @@
+# Environment
+.env
+venv/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# Service account credentials
+*.json
+!package.json
+
+# Output
+output/leads/*/
+output/conversas/
+output/*.html
+output/*.pdf
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
