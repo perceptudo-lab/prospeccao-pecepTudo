@@ -279,7 +279,7 @@ def send_daily_batch(dry_run: bool = False) -> dict:
                 extra_data = {
                     "data_contacto": datetime.now().strftime("%Y-%m-%d %H:%M"),
                     "touch_actual": str(touch),
-                    "mensagem_whatsapp": mensagem[:500],
+
                 }
                 if proximo_followup:
                     extra_data["data_followup_proximo"] = proximo_followup

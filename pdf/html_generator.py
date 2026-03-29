@@ -26,6 +26,13 @@ NICHE_TEMPLATES = {
     "gabinetes de contabilidade": "contabilidade.html",
     "escritorio de contabilidade": "contabilidade.html",
     "escritorios de contabilidade": "contabilidade.html",
+    "oficinas": "oficinas.html",
+    "oficina": "oficinas.html",
+    "oficina de automóveis": "oficinas.html",
+    "oficina de automoveis": "oficinas.html",
+    "oficina de automóveis": "oficinas.html",
+    "mecanica": "oficinas.html",
+    "auto": "oficinas.html",
 }
 
 

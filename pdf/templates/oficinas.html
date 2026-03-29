@@ -1,0 +1,1342 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prospeção Oficinas Mecânicas — Percep Tudo</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #7B2FF2;
+            --primary-light: #9B5FF5;
+            --secondary: #F2A900;
+            --secondary-light: #FFD166;
+            --accent: #00E5A0;
+            --accent-dark: #00B87A;
+            --light-bg: #F5F2ED;
+            --dark-bg: #1A1A2E;
+            --dark-bg-alt: #16162A;
+            --text-dark: #1A1A2E;
+            --text-mid: #4A4A5A;
+            --text-light: #FFFFFF;
+            --border-light: #E0DDD8;
+            --card-shadow: 0 4px 24px rgba(26,26,46,0.08);
+            --card-shadow-hover: 0 8px 32px rgba(123,47,242,0.12);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'IBM Plex Sans', sans-serif;
+            color: var(--text-dark);
+            background: #FFF;
+            font-size: 14px;
+            line-height: 1.6;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        h1, h2, h3, h4, h5 {
+            font-family: 'Space Grotesk', sans-serif;
+            line-height: 1.2;
+        }
+
+        .page {
+            width: 210mm;
+            min-height: 297mm;
+            padding: 15mm 20mm;
+            margin: 0 auto;
+            position: relative;
+            page-break-after: always;
+            overflow: hidden;
+            background: #FFF;
+        }
+
+        .page:last-child {
+            page-break-after: auto;
+        }
+
+        /* ============================================
+           FOOTER
+           ============================================ */
+        .page-footer {
+            position: absolute;
+            bottom: 10mm;
+            left: 20mm;
+            right: 20mm;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 10px;
+            color: #999;
+            border-top: 1px solid #EEE;
+            padding-top: 8px;
+        }
+
+        .page-footer a {
+            color: #999;
+            text-decoration: none;
+        }
+
+        /* ============================================
+           PAGE 1: COVER
+           ============================================ */
+        .cover {
+            background: linear-gradient(145deg, var(--dark-bg) 0%, #2D1B69 50%, var(--dark-bg-alt) 100%);
+            color: var(--text-light);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            position: relative;
+        }
+
+        .cover::before {
+            content: '';
+            position: absolute;
+            top: -20%;
+            right: -10%;
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, rgba(123,47,242,0.15) 0%, transparent 70%);
+            border-radius: 50%;
+        }
+
+        .cover::after {
+            content: '';
+            position: absolute;
+            bottom: -15%;
+            left: -5%;
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(242,169,0,0.08) 0%, transparent 70%);
+            border-radius: 50%;
+        }
+
+        .cover-logo {
+            position: absolute;
+            top: 20mm;
+            right: 20mm;
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 800;
+            font-size: 18px;
+            color: var(--text-light);
+            letter-spacing: 1px;
+            z-index: 2;
+        }
+
+        .cover-logo span {
+            color: var(--secondary);
+        }
+
+        .cover-content {
+            position: relative;
+            z-index: 2;
+            max-width: 85%;
+        }
+
+        .cover-badge {
+            display: inline-block;
+            padding: 6px 20px;
+            background: rgba(242,169,0,0.15);
+            border: 1px solid rgba(242,169,0,0.3);
+            border-radius: 30px;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--secondary);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-bottom: 32px;
+        }
+
+        .cover h1 {
+            font-size: 38px;
+            font-weight: 800;
+            line-height: 1.15;
+            margin-bottom: 24px;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .cover h1 .highlight {
+            color: var(--secondary);
+        }
+
+        .cover-subtitle {
+            font-size: 16px;
+            font-weight: 400;
+            color: rgba(255,255,255,0.75);
+            max-width: 480px;
+            margin: 0 auto 40px;
+            line-height: 1.5;
+        }
+
+        .cover-company {
+            display: inline-block;
+            padding: 12px 40px;
+            border: 2px solid var(--secondary);
+            border-radius: 8px;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--secondary);
+            margin-bottom: 48px;
+            background: rgba(242,169,0,0.05);
+        }
+
+        .cover-date {
+            font-size: 12px;
+            color: rgba(255,255,255,0.5);
+            position: absolute;
+            bottom: 20mm;
+            left: 0;
+            right: 0;
+            text-align: center;
+        }
+
+        .placeholder {
+            background: rgba(242,169,0,0.12);
+            padding: 2px 6px;
+            border-radius: 4px;
+            border-bottom: 2px dashed var(--secondary);
+            font-style: italic;
+        }
+
+        .placeholder-dark {
+            background: rgba(242,169,0,0.2);
+            padding: 2px 6px;
+            border-radius: 4px;
+            border-bottom: 2px dashed var(--secondary);
+        }
+
+        /* ============================================
+           PAGE 2: HOOK
+           ============================================ */
+        .hook {
+            background: var(--light-bg);
+        }
+
+        .hook-stat {
+            text-align: center;
+            padding: 48px 0 24px;
+        }
+
+        .hook-stat .big-number {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 80px;
+            font-weight: 800;
+            color: var(--primary);
+            line-height: 1;
+        }
+
+        .hook-stat .big-number-unit {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .hook-stat .stat-label {
+            font-size: 16px;
+            color: var(--text-mid);
+            margin-top: 8px;
+            max-width: 400px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .hook-stat .stat-source {
+            font-size: 11px;
+            color: #999;
+            margin-top: 4px;
+        }
+
+        .hook-divider {
+            width: 60px;
+            height: 4px;
+            background: var(--secondary);
+            margin: 32px auto;
+            border-radius: 2px;
+        }
+
+        .hook-copy {
+            max-width: 520px;
+            margin: 0 auto;
+            padding: 0 16px;
+        }
+
+        .hook-copy p {
+            margin-bottom: 16px;
+            font-size: 15px;
+            color: var(--text-dark);
+            line-height: 1.7;
+        }
+
+        .hook-copy p strong {
+            color: var(--primary);
+        }
+
+        /* ============================================
+           PAIN POINT PAGES
+           ============================================ */
+        .pain-page {
+            padding-top: 20mm;
+        }
+
+        .pain-header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+
+        .pain-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            flex-shrink: 0;
+        }
+
+        .pain-icon.red { background: rgba(242,169,0,0.12); }
+        .pain-icon.blue { background: rgba(123,47,242,0.1); }
+        .pain-icon.green { background: rgba(0,229,160,0.1); }
+        .pain-icon.orange { background: rgba(242,169,0,0.12); }
+
+        .pain-header h2 {
+            font-size: 26px;
+            font-weight: 800;
+            color: var(--text-dark);
+            line-height: 1.2;
+        }
+
+        .pain-label {
+            display: inline-block;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--secondary);
+            margin-bottom: 4px;
+        }
+
+        .pain-section {
+            margin-bottom: 24px;
+        }
+
+        .pain-section h3 {
+            font-size: 14px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .pain-section h3.problem { color: var(--secondary); }
+        .pain-section h3.cost { color: #E04040; }
+        .pain-section h3.solution { color: var(--accent-dark); }
+
+        .pain-section h3::before {
+            content: '';
+            width: 20px;
+            height: 3px;
+            border-radius: 2px;
+            display: inline-block;
+        }
+
+        .pain-section h3.problem::before { background: var(--secondary); }
+        .pain-section h3.cost::before { background: #E04040; }
+        .pain-section h3.solution::before { background: var(--accent-dark); }
+
+        .pain-section p {
+            font-size: 14px;
+            color: var(--text-mid);
+            line-height: 1.7;
+        }
+
+        .pain-metrics {
+            display: flex;
+            gap: 16px;
+            margin-top: 24px;
+        }
+
+        .metric-card {
+            flex: 1;
+            padding: 16px;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .metric-card.amber {
+            background: rgba(242,169,0,0.08);
+            border: 1px solid rgba(242,169,0,0.2);
+        }
+
+        .metric-card.purple {
+            background: rgba(123,47,242,0.06);
+            border: 1px solid rgba(123,47,242,0.15);
+        }
+
+        .metric-card.green {
+            background: rgba(0,229,160,0.06);
+            border: 1px solid rgba(0,229,160,0.2);
+        }
+
+        .metric-card .metric-value {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 22px;
+            font-weight: 800;
+            margin-bottom: 4px;
+        }
+
+        .metric-card.amber .metric-value { color: var(--secondary); }
+        .metric-card.purple .metric-value { color: var(--primary); }
+        .metric-card.green .metric-value { color: var(--accent-dark); }
+
+        .metric-card .metric-label {
+            font-size: 11px;
+            color: var(--text-mid);
+            font-weight: 500;
+        }
+
+        /* ============================================
+           PAGE 7: BEFORE/AFTER
+           ============================================ */
+        .comparison-page {
+            padding-top: 20mm;
+        }
+
+        .comparison-page h2 {
+            font-size: 28px;
+            font-weight: 800;
+            text-align: center;
+            margin-bottom: 8px;
+        }
+
+        .comparison-subtitle {
+            text-align: center;
+            color: var(--text-mid);
+            margin-bottom: 40px;
+            font-size: 15px;
+        }
+
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: 1fr 40px 1fr;
+            gap: 0;
+            align-items: start;
+        }
+
+        .comparison-col {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .comparison-col-header {
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 800;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            padding: 12px 16px;
+            border-radius: 8px;
+            text-align: center;
+            margin-bottom: 8px;
+        }
+
+        .col-before .comparison-col-header {
+            background: rgba(224,64,64,0.08);
+            color: #C03030;
+        }
+
+        .col-after .comparison-col-header {
+            background: rgba(0,229,160,0.08);
+            color: var(--accent-dark);
+        }
+
+        .comparison-item {
+            padding: 14px 16px;
+            border-radius: 10px;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .col-before .comparison-item {
+            background: rgba(224,64,64,0.04);
+            border-left: 3px solid #E04040;
+            color: var(--text-mid);
+        }
+
+        .col-after .comparison-item {
+            background: rgba(0,229,160,0.04);
+            border-left: 3px solid var(--accent);
+            color: var(--text-dark);
+            font-weight: 500;
+        }
+
+        .comparison-arrow {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            padding-top: 60px;
+        }
+
+        .arrow-icon {
+            width: 28px;
+            height: 28px;
+            background: var(--primary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .comparison-transition {
+            margin-top: 36px;
+            padding: 24px;
+            background: linear-gradient(135deg, rgba(123,47,242,0.04) 0%, rgba(0,229,160,0.04) 100%);
+            border-radius: 12px;
+            text-align: center;
+            font-size: 15px;
+            color: var(--text-dark);
+            line-height: 1.7;
+            border: 1px solid rgba(123,47,242,0.08);
+        }
+
+        /* ============================================
+           PAGE 8: ROI
+           ============================================ */
+        .roi-page {
+            padding-top: 20mm;
+        }
+
+        .roi-page h2 {
+            font-size: 28px;
+            font-weight: 800;
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .roi-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0 8px;
+            margin-bottom: 32px;
+        }
+
+        .roi-table th {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--text-mid);
+            padding: 8px 16px;
+            text-align: left;
+            border-bottom: 2px solid var(--primary);
+        }
+
+        .roi-table td {
+            padding: 14px 16px;
+            font-size: 14px;
+            background: var(--light-bg);
+            border: none;
+        }
+
+        .roi-table tr td:first-child {
+            border-radius: 10px 0 0 10px;
+            font-weight: 600;
+        }
+
+        .roi-table tr td:last-child {
+            border-radius: 0 10px 10px 0;
+        }
+
+        .roi-table .total td {
+            background: var(--dark-bg);
+            color: var(--text-light);
+            font-weight: 700;
+            font-size: 16px;
+        }
+
+        .roi-table .total td:last-child {
+            color: var(--secondary);
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 20px;
+        }
+
+        .roi-bar {
+            height: 8px;
+            border-radius: 4px;
+            background: rgba(123,47,242,0.15);
+            margin-top: 6px;
+        }
+
+        .roi-bar-fill {
+            height: 100%;
+            border-radius: 4px;
+            background: linear-gradient(90deg, var(--primary) 0%, var(--accent) 100%);
+        }
+
+        .roi-disclaimer {
+            font-size: 12px;
+            color: #999;
+            text-align: center;
+            margin-bottom: 32px;
+            font-style: italic;
+        }
+
+        .roi-metrics-row {
+            display: flex;
+            gap: 16px;
+            margin-top: 24px;
+        }
+
+        .roi-metric-box {
+            flex: 1;
+            text-align: center;
+            padding: 20px 16px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, var(--primary) 0%, #5A1FD0 100%);
+            color: white;
+        }
+
+        .roi-metric-box .roi-metric-value {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 32px;
+            font-weight: 800;
+            margin-bottom: 4px;
+        }
+
+        .roi-metric-box .roi-metric-label {
+            font-size: 12px;
+            opacity: 0.85;
+        }
+
+        /* ============================================
+           PAGE 9: CTA
+           ============================================ */
+        .cta-page {
+            background: linear-gradient(160deg, var(--dark-bg) 0%, #2D1B69 100%);
+            color: var(--text-light);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            position: relative;
+        }
+
+        .cta-page::before {
+            content: '';
+            position: absolute;
+            top: 10%;
+            right: -5%;
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, rgba(242,169,0,0.1) 0%, transparent 70%);
+            border-radius: 50%;
+        }
+
+        .cta-content {
+            position: relative;
+            z-index: 2;
+            max-width: 500px;
+        }
+
+        .cta-content h2 {
+            font-size: 32px;
+            font-weight: 800;
+            margin-bottom: 24px;
+        }
+
+        .cta-content p {
+            font-size: 16px;
+            line-height: 1.7;
+            color: rgba(255,255,255,0.8);
+            margin-bottom: 16px;
+        }
+
+        .cta-offer {
+            margin: 32px 0;
+            padding: 24px 32px;
+            background: rgba(242,169,0,0.1);
+            border: 2px solid var(--secondary);
+            border-radius: 12px;
+        }
+
+        .cta-offer h3 {
+            font-size: 20px;
+            color: var(--secondary);
+            margin-bottom: 16px;
+        }
+
+        .cta-contact {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            text-align: left;
+        }
+
+        .cta-contact-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 16px;
+            color: var(--text-light);
+        }
+
+        .cta-contact-icon {
+            width: 36px;
+            height: 36px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+
+        .cta-urgency {
+            margin-top: 32px;
+            font-size: 14px;
+            color: rgba(255,255,255,0.6);
+            font-style: italic;
+            max-width: 420px;
+        }
+
+        .cta-page .page-footer {
+            color: rgba(255,255,255,0.3);
+            border-top-color: rgba(255,255,255,0.1);
+        }
+
+        /* ============================================
+           PRINT STYLES
+           ============================================ */
+        @media print {
+            body { background: white; }
+            .page {
+                margin: 0;
+                box-shadow: none;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+        }
+
+        @media screen {
+            .page {
+                margin: 20px auto;
+                box-shadow: 0 2px 40px rgba(0,0,0,0.08);
+            }
+        }
+
+        /* ============================================
+           RESPONSIVE — MOBILE
+           ============================================ */
+        @media screen and (max-width: 768px) {
+            .page {
+                width: 100%;
+                min-height: auto;
+                padding: 24px 16px;
+                page-break-after: auto;
+                margin: 0;
+                box-shadow: none;
+                border-bottom: 1px solid var(--border-light);
+            }
+
+            /* Cover */
+            .cover {
+                min-height: 100vh;
+                min-height: 100dvh;
+                padding: 32px 20px;
+            }
+
+            .cover-logo {
+                position: relative;
+                top: auto;
+                right: auto;
+                text-align: center;
+                margin-bottom: 40px;
+                font-size: 16px;
+            }
+
+            .cover-content {
+                max-width: 100%;
+            }
+
+            .cover h1 {
+                font-size: 26px;
+            }
+
+            .cover-subtitle {
+                font-size: 14px;
+            }
+
+            .cover-company {
+                font-size: 18px;
+                padding: 10px 24px;
+            }
+
+            .cover-badge {
+                font-size: 10px;
+                padding: 5px 14px;
+            }
+
+            .cover-date {
+                position: relative;
+                bottom: auto;
+                margin-top: 32px;
+            }
+
+            /* Hook */
+            .hook {
+                min-height: auto;
+            }
+
+            .hook-stat .big-number {
+                font-size: 56px;
+            }
+
+            .hook-stat .big-number-unit {
+                font-size: 22px;
+            }
+
+            .hook-stat .stat-label {
+                font-size: 14px;
+            }
+
+            .hook-copy p {
+                font-size: 14px;
+            }
+
+            /* Pain pages */
+            .pain-header {
+                flex-direction: column;
+                gap: 12px;
+            }
+
+            .pain-header h2 {
+                font-size: 20px;
+            }
+
+            .pain-icon {
+                width: 48px;
+                height: 48px;
+                font-size: 24px;
+            }
+
+            .pain-section p {
+                font-size: 13px;
+            }
+
+            .pain-metrics {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .metric-card .metric-value {
+                font-size: 18px;
+            }
+
+            /* Comparison */
+            .comparison-page h2 {
+                font-size: 22px;
+            }
+
+            .comparison-grid {
+                grid-template-columns: 1fr;
+                gap: 24px;
+            }
+
+            .comparison-arrow {
+                display: none;
+            }
+
+            .comparison-col {
+                gap: 8px;
+            }
+
+            .comparison-item {
+                font-size: 13px;
+                padding: 12px 14px;
+            }
+
+            .comparison-transition {
+                font-size: 13px;
+                padding: 16px;
+            }
+
+            /* ROI */
+            .roi-page h2 {
+                font-size: 22px;
+                margin-bottom: 24px;
+            }
+
+            .roi-table th,
+            .roi-table td {
+                padding: 10px 12px;
+                font-size: 13px;
+            }
+
+            .roi-table .total td:last-child {
+                font-size: 16px;
+            }
+
+            .roi-metrics-row {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .roi-metric-box .roi-metric-value {
+                font-size: 26px;
+            }
+
+            .roi-metric-box .roi-metric-label {
+                font-size: 11px;
+            }
+
+            /* CTA */
+            .cta-page {
+                min-height: 100vh;
+                min-height: 100dvh;
+                padding: 40px 20px;
+            }
+
+            .cta-content h2 {
+                font-size: 26px;
+            }
+
+            .cta-content p {
+                font-size: 14px;
+            }
+
+            .cta-offer {
+                padding: 20px;
+            }
+
+            .cta-offer h3 {
+                font-size: 18px;
+            }
+
+            .cta-contact-item {
+                font-size: 14px;
+            }
+
+            /* Footer */
+            .page-footer {
+                position: relative;
+                bottom: auto;
+                left: auto;
+                right: auto;
+                margin-top: 24px;
+                flex-direction: column;
+                gap: 4px;
+                text-align: center;
+                font-size: 9px;
+            }
+        }
+
+        /* Small phones */
+        @media screen and (max-width: 380px) {
+            .cover h1 {
+                font-size: 22px;
+            }
+
+            .pain-header h2 {
+                font-size: 18px;
+            }
+
+            .hook-stat .big-number {
+                font-size: 44px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ========== PAGE 1: COVER ========== -->
+    <section class="page cover">
+        <div class="cover-logo">PERCEP <span>TUDO</span></div>
+        <div class="cover-content">
+            <div class="cover-badge">Diagnóstico de IA para Oficinas</div>
+            <h1>A sua oficina está cheia.<br>Mas está a <span class="highlight">lucrar o que devia</span>?</h1>
+            <p class="cover-subtitle">Diagnóstico personalizado de Inteligência Artificial — como transformar horas perdidas em faturação real.</p>
+            <div class="cover-company"><span class="placeholder-dark">{NOME_EMPRESA}</span></div>
+            <div style="display: flex; gap: 20px; align-items: center; justify-content: center; margin-top: 24px;">
+                <div style="display: flex; align-items: center; gap: 8px; background: rgba(123,47,242,0.2); border: 1px solid rgba(123,47,242,0.4); border-radius: 6px; padding: 6px 14px;">
+                    <span style="font-size: 14px;">&#127760;</span>
+                    <span style="color: rgba(255,255,255,0.9); font-size: 12px; font-weight: 500;">{WEBSITE}</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px; background: rgba(242,169,0,0.15); border: 1px solid rgba(242,169,0,0.4); border-radius: 6px; padding: 6px 14px;">
+                    <span style="font-size: 14px;">&#128247;</span>
+                    <span style="color: rgba(255,255,255,0.9); font-size: 12px; font-weight: 500;">{INSTAGRAM}</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ========== PAGE 2: HOOK ========== -->
+    <section class="page hook">
+        <div class="hook-stat">
+            <div class="big-number">53<span class="big-number-unit">%</span></div>
+            <p class="stat-label">das oficinas portuguesas operam abaixo de 75% da sua capacidade. A maioria dos donos nem sabe.</p>
+            <p class="stat-source">Fonte: ANECRA — Inquérito Nacional Pós-Venda, 2025</p>
+        </div>
+        <div class="hook-divider"></div>
+        <div class="hook-copy">
+            <p>A <strong><span class="placeholder">{NOME_EMPRESA}</span></strong> não tem falta de trabalho. O problema é outro.</p>
+            <p>São as horas que ninguém conta. Os orçamentos feitos de memória. Os clientes que ligam e ninguém atende. Os técnicos que passam mais tempo em papelada do que debaixo de carros.</p>
+            <p>O setor da reparação automóvel em Portugal vale quase <strong>2 mil milhões de euros</strong> e está a crescer. Mas 74% das oficinas dizem que não encontram técnicos qualificados. E a maioria nem sabe quanto perde por mês em ineficiências operacionais.</p>
+            <p>Este documento não é um folheto genérico. Foi preparado para a <strong><span class="placeholder">{NOME_EMPRESA}</span></strong>, com base em dados reais do setor em Portugal. Nas próximas páginas, vai ver onde está a perder margem — e como a inteligência artificial resolve cada problema em semanas.</p>
+        </div>
+        <div class="page-footer">
+            <span>Percep Tudo</span>
+            <span>perceptudo@gmail.com | +351 910 104 835</span>
+        </div>
+    </section>
+
+    <!-- ========== PAGE 3: PAIN #1 ========== -->
+    <section class="page pain-page">
+        <div class="pain-header">
+            <div class="pain-icon red">&#9881;</div>
+            <div>
+                <span class="pain-label">Dor #1</span>
+                <h2>Sabe quantas horas faturáveis a sua equipa desperdiça por semana?</h2>
+            </div>
+        </div>
+
+        <div class="pain-section">
+            <h3 class="problem">O Problema</h3>
+            <p>A maioria das oficinas em Portugal não rastreia tempo produtivo vs. não produtivo. Resultado: técnicos a esperar por peças sem registo. Trabalhos subestimados que comem margem. Horas mortas que ninguém contabiliza.</p>
+        </div>
+
+        <div class="pain-section">
+            <h3 class="cost">O Custo de Não Agir</h3>
+            <p>Segundo a ANECRA, 53% das oficinas operam abaixo de 75% da capacidade. Para uma oficina com 5 técnicos a 34€/hora, cada ponto percentual abaixo da capacidade ideal representa mais de 800€/mês em faturação perdida. Ao final do ano: <strong>10.000 a 25.000€</strong> que nunca aparecem na conta.</p>
+        </div>
+
+        <div class="pain-section">
+            <h3 class="solution">A Solução</h3>
+            <p>Dashboard inteligente que mostra, em tempo real, a produtividade de cada técnico. A IA identifica os gargalos — espera de peças, retrabalho, alocação ineficiente — e sugere ajustes semanais. Sem complicações. Sem alterar a rotina.</p>
+        </div>
+
+        <div class="pain-metrics">
+            <div class="metric-card amber">
+                <div class="metric-value">53%</div>
+                <div class="metric-label">Oficinas abaixo da capacidade</div>
+            </div>
+            <div class="metric-card purple">
+                <div class="metric-value">34€/h</div>
+                <div class="metric-label">Preço médio hora trabalho</div>
+            </div>
+            <div class="metric-card green">
+                <div class="metric-value">250-400%</div>
+                <div class="metric-label">ROI estimado</div>
+            </div>
+        </div>
+
+        <div class="page-footer">
+            <span>Percep Tudo</span>
+            <span>perceptudo@gmail.com | +351 910 104 835</span>
+        </div>
+    </section>
+
+    <!-- ========== PAGE 4: PAIN #2 ========== -->
+    <section class="page pain-page">
+        <div class="pain-header">
+            <div class="pain-icon blue">&#128200;</div>
+            <div>
+                <span class="pain-label">Dor #2</span>
+                <h2>Quanto custa realmente cada hora de trabalho na sua oficina?</h2>
+            </div>
+        </div>
+
+        <div class="pain-section">
+            <h3 class="problem">O Problema</h3>
+            <p>A maioria dos donos de oficina define preços por intuição ou por referência ao vizinho. Não sabe o custo real por hora — incluindo energia, ferramentas, espaço, seguros e tempo administrativo. Aceita trabalhos que dão prejuízo sem saber.</p>
+        </div>
+
+        <div class="pain-section">
+            <h3 class="cost">O Custo de Não Agir</h3>
+            <p>Quando a margem real é desconhecida, cada orçamento é uma aposta. Serviços subpreçados acumulam-se. No final do mês, a faturação parece boa — mas o lucro não aparece. Impacto estimado: <strong>8.000 a 20.000€/ano</strong> em margem que escapa entre os dedos.</p>
+        </div>
+
+        <div class="pain-section">
+            <h3 class="solution">A Solução</h3>
+            <p>Sistema de análise financeira com IA que calcula automaticamente o custo real por hora e por tipo de serviço. Alerta quando um orçamento está abaixo do limiar de rentabilidade. Mostra quais serviços dão mais margem e quais estão a custar dinheiro. Tudo num ecrã, sem precisar de contabilista.</p>
+        </div>
+
+        <div class="pain-metrics">
+            <div class="metric-card amber">
+                <div class="metric-value">60-70%</div>
+                <div class="metric-label">Micro-oficinas sem controlo de custos</div>
+            </div>
+            <div class="metric-card purple">
+                <div class="metric-value">10-25K€</div>
+                <div class="metric-label">Volume mensal médio</div>
+            </div>
+            <div class="metric-card green">
+                <div class="metric-value">200-350%</div>
+                <div class="metric-label">ROI estimado</div>
+            </div>
+        </div>
+
+        <div class="page-footer">
+            <span>Percep Tudo</span>
+            <span>perceptudo@gmail.com | +351 910 104 835</span>
+        </div>
+    </section>
+
+    <!-- ========== PAGE 5: PAIN #3 ========== -->
+    <section class="page pain-page">
+        <div class="pain-header">
+            <div class="pain-icon green">&#128241;</div>
+            <div>
+                <span class="pain-label">Dor #3</span>
+                <h2>Quantos clientes perdeu este mês porque ninguém atendeu o telefone?</h2>
+            </div>
+        </div>
+
+        <div class="pain-section">
+            <h3 class="problem">O Problema</h3>
+            <p>O dono de oficina é mecânico, gestor, recepcionista e vendedor ao mesmo tempo. Quando está debaixo de um carro, ninguém atende o telefone. Quando atende, perde tempo a explicar estados de reparação. Prazos não cumpridos são a causa número um de insatisfação.</p>
+        </div>
+
+        <div class="pain-section">
+            <h3 class="cost">O Custo de Não Agir</h3>
+            <p>70% dos consumidores esperam comunicação digital e atualizações transparentes. Um cliente que liga três vezes para saber "o meu carro já está pronto?" não volta. Um cliente que nunca recebe resposta vai ao concorrente. Impacto: <strong>3.000 a 8.000€/ano</strong> em tempo administrativo e clientes perdidos.</p>
+        </div>
+
+        <div class="pain-section">
+            <h3 class="solution">A Solução</h3>
+            <p>Assistente virtual com IA para WhatsApp que trata de tudo: marca serviços 24 horas por dia, confirma automaticamente, atualiza o cliente sobre o estado da reparação ("em diagnóstico" → "peça encomendada" → "pronto para levantar") e envia lembretes de manutenção. O dono foca-se nos carros. A IA trata do resto.</p>
+        </div>
+
+        <div class="pain-metrics">
+            <div class="metric-card amber">
+                <div class="metric-value">70%+</div>
+                <div class="metric-label">Querem comunicação digital</div>
+            </div>
+            <div class="metric-card purple">
+                <div class="metric-value">60-75%</div>
+                <div class="metric-label">Gerem tudo por telefone</div>
+            </div>
+            <div class="metric-card green">
+                <div class="metric-value">300-500%</div>
+                <div class="metric-label">ROI estimado</div>
+            </div>
+        </div>
+
+        <div class="page-footer">
+            <span>Percep Tudo</span>
+            <span>perceptudo@gmail.com | +351 910 104 835</span>
+        </div>
+    </section>
+
+    <!-- ========== PAGE 6: PAIN #4 ========== -->
+    <section class="page pain-page">
+        <div class="pain-header">
+            <div class="pain-icon orange">&#128101;</div>
+            <div>
+                <span class="pain-label">Dor #4</span>
+                <h2>Não pode contratar quem não existe. Mas pode multiplicar quem tem.</h2>
+            </div>
+        </div>
+
+        <div class="pain-section">
+            <h3 class="problem">O Problema</h3>
+            <p>74% das oficinas em Portugal dizem que não encontram técnicos qualificados. A idade média dos chapeiros é 49 anos, pintores 45 — a reforma está à porta e não há substituição. Remunerações subiram 8,1% e mesmo assim não chegam.</p>
+        </div>
+
+        <div class="pain-section">
+            <h3 class="cost">O Custo de Não Agir</h3>
+            <p>Cada técnico que sai leva consigo anos de conhecimento que nunca foi documentado. Cada vaga por preencher representa <strong>15.000 a 30.000€/ano</strong> em capacidade perdida. E a situação só vai piorar — o número de formandos em mecânica está em mínimos históricos.</p>
+        </div>
+
+        <div class="pain-section">
+            <h3 class="solution">A Solução</h3>
+            <p>Estratégia tripla: (1) automação de toda a papelada que rouba tempo aos técnicos; (2) assistente de diagnóstico com IA que cruza códigos de erro com bases de dados de milhões de reparações, reduzindo tempo de diagnóstico em 25-30%; (3) base de conhecimento interna que captura a experiência dos técnicos seniores antes que se reformem.</p>
+        </div>
+
+        <div class="pain-metrics">
+            <div class="metric-card amber">
+                <div class="metric-value">74%</div>
+                <div class="metric-label">Afetadas por escassez</div>
+            </div>
+            <div class="metric-card purple">
+                <div class="metric-value">+8,1%</div>
+                <div class="metric-label">Aumento remunerações</div>
+            </div>
+            <div class="metric-card green">
+                <div class="metric-value">200-350%</div>
+                <div class="metric-label">ROI estimado</div>
+            </div>
+        </div>
+
+        <div class="page-footer">
+            <span>Percep Tudo</span>
+            <span>perceptudo@gmail.com | +351 910 104 835</span>
+        </div>
+    </section>
+
+    <!-- ========== PAGE 7: BEFORE/AFTER ========== -->
+    <section class="page comparison-page">
+        <h2>O dia-a-dia da <span class="placeholder">{NOME_EMPRESA}</span></h2>
+        <p class="comparison-subtitle">Hoje e com inteligência artificial aplicada</p>
+
+        <div class="comparison-grid">
+            <div class="comparison-col col-before">
+                <div class="comparison-col-header">Hoje</div>
+                <div class="comparison-item">Sem saber quantas horas são faturáveis</div>
+                <div class="comparison-item">Orçamentos feitos de memória</div>
+                <div class="comparison-item">1-2h/dia ao telefone com clientes</div>
+                <div class="comparison-item">Técnicos a preencher papéis</div>
+                <div class="comparison-item">Conhecimento na cabeça do sénior</div>
+                <div class="comparison-item">Decisões por instinto</div>
+            </div>
+            <div class="comparison-arrow">
+                <div class="arrow-icon">→</div>
+                <div class="arrow-icon">→</div>
+                <div class="arrow-icon">→</div>
+                <div class="arrow-icon">→</div>
+                <div class="arrow-icon">→</div>
+                <div class="arrow-icon">→</div>
+            </div>
+            <div class="comparison-col col-after">
+                <div class="comparison-col-header">Com Percep Tudo</div>
+                <div class="comparison-item">Dashboard em tempo real por técnico</div>
+                <div class="comparison-item">Preços calculados com custos reais</div>
+                <div class="comparison-item">Comunicação 100% automática via WhatsApp</div>
+                <div class="comparison-item">Papelada automatizada — técnicos a reparar</div>
+                <div class="comparison-item">Base de conhecimento digital pesquisável</div>
+                <div class="comparison-item">Decisões baseadas em dados concretos</div>
+            </div>
+        </div>
+
+        <div class="comparison-transition">
+            Cada uma destas mudanças funciona sozinha. Mas juntas, transformam a operação. Uma oficina que vê os números em tempo real, que comunica sem esforço e que tira o máximo de cada técnico não é uma oficina maior — <strong>é uma oficina mais inteligente.</strong>
+        </div>
+
+        <div class="page-footer">
+            <span>Percep Tudo</span>
+            <span>perceptudo@gmail.com | +351 910 104 835</span>
+        </div>
+    </section>
+
+    <!-- ========== PAGE 8: ROI ========== -->
+    <section class="page roi-page">
+        <h2>O retorno de investir em inteligência aplicada</h2>
+
+        <table class="roi-table">
+            <thead>
+                <tr>
+                    <th>Área</th>
+                    <th>Poupança Anual Estimada</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>
+                        Produtividade e tempo faturável
+                        <div class="roi-bar"><div class="roi-bar-fill" style="width: 56%"></div></div>
+                    </td>
+                    <td>8.000 - 15.000€</td>
+                </tr>
+                <tr>
+                    <td>
+                        Gestão financeira e margens
+                        <div class="roi-bar"><div class="roi-bar-fill" style="width: 44%"></div></div>
+                    </td>
+                    <td>6.000 - 12.000€</td>
+                </tr>
+                <tr>
+                    <td>
+                        Agendamento e comunicação
+                        <div class="roi-bar"><div class="roi-bar-fill" style="width: 26%"></div></div>
+                    </td>
+                    <td>4.000 - 7.000€</td>
+                </tr>
+                <tr>
+                    <td>
+                        Eficiência da equipa
+                        <div class="roi-bar"><div class="roi-bar-fill" style="width: 74%"></div></div>
+                    </td>
+                    <td>10.000 - 20.000€</td>
+                </tr>
+                <tr class="total">
+                    <td>Total Estimado</td>
+                    <td>28.000 - 54.000€/ano</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <p class="roi-disclaimer">Valores conservadores baseados em dados do setor (ANECRA, 2025) e benchmarks de IA em pequenas e médias empresas europeias.</p>
+
+        <div class="roi-metrics-row">
+            <div class="roi-metric-box">
+                <div class="roi-metric-value">73%</div>
+                <div class="roi-metric-label">Redução média em tempo de processos</div>
+            </div>
+            <div class="roi-metric-box">
+                <div class="roi-metric-value">3,2x</div>
+                <div class="roi-metric-label">ROI médio em 90 dias</div>
+            </div>
+            <div class="roi-metric-box">
+                <div class="roi-metric-value">96%</div>
+                <div class="roi-metric-label">Dos clientes escalam após piloto</div>
+            </div>
+        </div>
+
+        <div class="page-footer">
+            <span>Percep Tudo</span>
+            <span>perceptudo@gmail.com | +351 910 104 835</span>
+        </div>
+    </section>
+
+    <!-- ========== PAGE 9: CTA ========== -->
+    <section class="page cta-page">
+        <div class="cta-content">
+            <h2>Próximo Passo</h2>
+            <p>A <span class="placeholder-dark">{NOME_EMPRESA}</span> já tem o trabalho e a equipa.</p>
+            <p>O que falta é visibilidade sobre onde está a perder margem — e as ferramentas certas para recuperá-la.</p>
+
+            <div class="cta-offer">
+                <h3>Diagnóstico Gratuito de 30 Minutos</h3>
+                <div class="cta-contact">
+                    <div class="cta-contact-item">
+                        <div class="cta-contact-icon">&#128242;</div>
+                        <span>WhatsApp: +351 910 104 835</span>
+                    </div>
+                    <div class="cta-contact-item">
+                        <div class="cta-contact-icon">&#9993;</div>
+                        <span>Email: perceptudo@gmail.com</span>
+                    </div>
+                </div>
+            </div>
+
+            <p style="font-size: 14px; opacity: 0.9;">Sem compromisso. Sem jargão técnico.<br>Apenas uma conversa prática, de empresário para empresário.</p>
+
+            <p class="cta-urgency">Os seus concorrentes já estão a olhar para isto. A questão não é se a IA vai chegar às oficinas — é se a <span class="placeholder-dark">{NOME_EMPRESA}</span> vai ser das primeiras a beneficiar.</p>
+        </div>
+
+        <div class="page-footer">
+            <span style="color: rgba(255,255,255,0.3);">Percep Tudo</span>
+            <span style="color: rgba(255,255,255,0.3);">perceptudo@gmail.com | +351 910 104 835</span>
+        </div>
+    </section>
+
+</body>
+</html>

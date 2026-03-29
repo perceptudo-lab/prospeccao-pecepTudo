@@ -168,8 +168,8 @@ SPIN stages: outreach → situacao → problema → implicacao → solucao → f
 
 ## Google Sheets (CRM)
 
-### Colunas (19)
-Nome | Telefone | Cidade | Sector | Rating | Reviews | Instagram | Website | Score | Estado | Data Contacto | Link PDF | Follow-up 1 | Follow-up 2 | Notas | Mensagem WhatsApp | Follow-up 3 | Proximo Follow-up | Touch Actual
+### Colunas (18)
+Nome | Telefone | Cidade | Sector | Rating | Reviews | Instagram | Website | Score | Estado | Data Contacto | Link PDF | Follow-up 1 | Follow-up 2 | Notas | Follow-up 3 | Proximo Follow-up | Touch Actual
 
 ### Estados possiveis
 novo → pronto_para_envio → contactado → followup_1 → followup_2 → followup_3 → frio

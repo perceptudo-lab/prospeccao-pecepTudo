@@ -44,7 +44,6 @@ COL_WIDTHS = {
     12: 120,  # M - Follow-up 1
     13: 120,  # N - Follow-up 2
     14: 180,  # O - Notas
-    15: 350,  # P - Mensagem WhatsApp
 }
 
 total_rows = len(ws.get_all_values())
@@ -132,26 +131,6 @@ if total_rows > 1:
         }
     })
 
-# --- 5. Coluna Mensagem WhatsApp (P) — wrap text para ser legivel ---
-if total_rows > 1:
-    requests.append({
-        "repeatCell": {
-            "range": {
-                "sheetId": sheet_id,
-                "startRowIndex": 1,
-                "endRowIndex": total_rows,
-                "startColumnIndex": 15,
-                "endColumnIndex": 16,
-            },
-            "cell": {
-                "userEnteredFormat": {
-                    "wrapStrategy": "WRAP",
-                    "textFormat": {"fontSize": 8},
-                }
-            },
-            "fields": "userEnteredFormat(wrapStrategy,textFormat)",
-        }
-    })
 
 # --- 6. Coluna Nome (A) — bold ---
 if total_rows > 1:

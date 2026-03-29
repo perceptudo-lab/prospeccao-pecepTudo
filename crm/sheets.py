@@ -36,10 +36,9 @@ COL_LINK_PDF = 12
 COL_FOLLOWUP_1 = 13
 COL_FOLLOWUP_2 = 14
 COL_NOTAS = 15
-COL_MENSAGEM_WHATSAPP = 16
-COL_FOLLOWUP_3 = 17
-COL_PROXIMO_FOLLOWUP = 18
-COL_TOUCH_ACTUAL = 19
+COL_FOLLOWUP_3 = 16
+COL_PROXIMO_FOLLOWUP = 17
+COL_TOUCH_ACTUAL = 18
 
 # --- Constantes de colunas (aba Termos) ---
 COL_TERMO = 1
@@ -56,7 +55,7 @@ SCOPES = [
 HEADERS_LEADS = [
     "Nome", "Telefone", "Cidade", "Sector", "Rating", "Reviews",
     "Instagram", "Website", "Score", "Estado", "Data Contacto",
-    "Link PDF", "Follow-up 1", "Follow-up 2", "Notas", "Mensagem WhatsApp",
+    "Link PDF", "Follow-up 1", "Follow-up 2", "Notas",
     "Follow-up 3", "Proximo Follow-up", "Touch Actual",
 ]
 
@@ -337,7 +336,6 @@ def add_leads(leads: list[dict]) -> int:
                 "",  # Follow-up 1
                 "",  # Follow-up 2
                 "",  # Notas
-                "",  # Mensagem WhatsApp
                 "",  # Follow-up 3
                 "",  # Proximo Follow-up
                 "",  # Touch Actual
@@ -364,7 +362,7 @@ def update_lead_status(
     """Actualiza o estado de um lead pelo telefone.
 
     extra_data permite actualizar campos adicionais.
-    Keys aceites: score, data_contacto, link_pdf, followup_1, followup_2, notas, mensagem_whatsapp.
+    Keys aceites: score, data_contacto, link_pdf, followup_1, followup_2, notas, followup_3.
     """
     col_map = {
         "score": COL_SCORE,
@@ -373,7 +371,6 @@ def update_lead_status(
         "followup_1": COL_FOLLOWUP_1,
         "followup_2": COL_FOLLOWUP_2,
         "notas": COL_NOTAS,
-        "mensagem_whatsapp": COL_MENSAGEM_WHATSAPP,
         "followup_3": COL_FOLLOWUP_3,
         "data_followup_proximo": COL_PROXIMO_FOLLOWUP,
         "touch_actual": COL_TOUCH_ACTUAL,
