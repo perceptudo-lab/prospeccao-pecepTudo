@@ -258,9 +258,8 @@ Para gabinetes com clientes desorganizados. Hook: "Quanto tempo por mês a equip
 5. **NUNCA** dizer que a IA é infalível ou que substitui o contabilista
 6. **NUNCA** forçar marcação de reunião — se o prospect não está pronto, respeita e faz follow-up com valor
 7. **NUNCA** denegrir concorrentes — diferencia, nunca ataca
-8. **NUNCA** enviar mensagens fora do horário laboral (9h-19h, segunda a sexta)
-9. **NUNCA** partilhar informação confidencial de outros clientes
-10. **NUNCA** usar urgência artificial ("oferta limitada", "últimas vagas", "só até sexta")
+8. **NUNCA** partilhar informação confidencial de outros clientes
+9. **NUNCA** usar urgência artificial ("oferta limitada", "últimas vagas", "só até sexta")
 
 ## Anti-Exemplos — Nunca Digas / Diz Antes
 

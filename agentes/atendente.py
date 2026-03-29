@@ -11,6 +11,7 @@ Responde 24/7 (sem restricao de horario).
 import json
 import os
 import random
+import re
 import time
 from datetime import datetime
 from pathlib import Path
@@ -69,11 +70,52 @@ PRICE_KEYWORDS = ["preco", "preço", "custo", "custa", "valor", "investimento", 
 # Keywords de reclamacao (safety net)
 COMPLAINT_KEYWORDS = ["reclamacao", "reclamação", "mau servico", "mau serviço", "fraude", "burla", "enganado"]
 
+# Keywords de irritacao (safety net)
+IRRITATED_KEYWORDS = [
+    "chato", "chata", "irritante", "deixa-me em paz", "deixe-me em paz",
+    "nao me chateie", "não me chateie", "nao incomode", "não incomode",
+    "pare de me contactar", "cansa", "farto", "farta", "aborrecer",
+    "incomodar", "spam", "bloqueio", "bloquear", "reportar",
+]
+
+# Keywords de intencao de agendamento (safety net)
+SCHEDULE_KEYWORDS = [
+    "agendar", "marcar reuniao", "marcar reunião", "marcar diagnostico",
+    "marcar diagnóstico", "vamos marcar", "quando podemos",
+    "pode ser quando", "tenho disponibilidade", "disponivel para",
+    "disponível para", "quero avancar", "quero avançar",
+    "quero a reuniao", "quero a reunião", "sim pode marcar",
+    "sim, pode marcar", "ok marca", "ok, marca",
+]
+
+# Patterns de alto valor (regex com thresholds por nicho)
+HIGH_VALUE_PATTERNS = [
+    r"(\d+)\s*baia",
+    r"(\d+)\s*elevador",
+    r"(\d+)\s*tecnico",
+    r"(\d+)\s*técnico",
+    r"(\d+)\s*cliente",
+    r"(\d+)\s*colaborador",
+    r"(\d+)\s*empresa",
+]
+
+HIGH_VALUE_THRESHOLDS = {
+    "oficinas": {"baia": 3, "elevador": 3, "tecnico": 5, "técnico": 5},
+    "contabilidade": {"cliente": 200, "colaborador": 8, "empresa": 200},
+}
+
 # Keywords de opt-out
-OPTOUT_KEYWORDS = ["parar", "stop", "remover", "cancelar", "nao quero", "não quero"]
+OPTOUT_KEYWORDS = [
+    "parar", "stop", "remover", "cancelar", "nao quero", "não quero",
+    "sair", "desinscrever", "chega", "nao enviem mais", "não enviem mais",
+    "nao me contactem", "não me contactem", "unsubscribe",
+]
 
 # SPIN stages
 VALID_STAGES = {"outreach", "situacao", "problema", "implicacao", "solucao", "fecho", "escalado", "frio"}
+
+# Ordem de progressao SPIN (sem saltar stages)
+SPIN_ORDER = ["outreach", "situacao", "problema", "implicacao", "solucao", "fecho"]
 
 # Instrucoes JSON adicionadas ao final de cada system prompt
 JSON_FORMAT_INSTRUCTIONS = """
@@ -301,6 +343,40 @@ def _detect_complaint(message: str) -> bool:
     return any(kw in msg_lower for kw in COMPLAINT_KEYWORDS)
 
 
+def _detect_irritated(message: str) -> bool:
+    """Detecta lead irritado ou frustrado (safety net)."""
+    msg_lower = message.strip().lower()
+    return any(kw in msg_lower for kw in IRRITATED_KEYWORDS)
+
+
+def _detect_schedule_intent(message: str) -> bool:
+    """Detecta intencao de agendar reuniao/diagnostico (safety net)."""
+    msg_lower = message.strip().lower()
+    return any(kw in msg_lower for kw in SCHEDULE_KEYWORDS)
+
+
+def _detect_high_value(message: str, nicho: str) -> bool:
+    """Detecta lead de alto valor pela dimensao do negocio (safety net).
+
+    Thresholds por nicho:
+    - Oficinas: >3 baias, >3 elevadores, >5 tecnicos
+    - Contabilidade: >200 clientes, >8 colaboradores, >200 empresas
+    """
+    msg_lower = message.lower()
+    niche_thresholds = HIGH_VALUE_THRESHOLDS.get(nicho, {})
+    if not niche_thresholds:
+        return False
+
+    for pattern in HIGH_VALUE_PATTERNS:
+        match = re.search(pattern, msg_lower)
+        if match:
+            number = int(match.group(1))
+            for key, threshold in niche_thresholds.items():
+                if key in pattern and number >= threshold:
+                    return True
+    return False
+
+
 def _find_lead_by_phone(phone: str) -> dict | None:
     """Procura lead no Sheets pelo telefone."""
     states = [
@@ -476,7 +552,7 @@ def generate_followup_message(
         ),
         3: (
             f"Gera a mensagem de follow-up DIA 3 (conteudo util) para {nome}. "
-            f"Enviamos o PDF ha 7 dias, follow-up ha 4 dias. Sem resposta. "
+            f"Enviamos o PDF ha 3 dias, follow-up ha 1 dia. Sem resposta. "
             f"Segue EXACTAMENTE a tua cadencia de follow-up definida para o Dia 3. "
             f"Max 1 mensagem curta (2-3 linhas)."
         ),
@@ -649,10 +725,31 @@ def handle_incoming_message(phone: str, message: str) -> str | None:
             "escalation": None,
         }
 
-    # 8. Actualizar stage
+    # 8. Actualizar stage (com validacao de progressao SPIN — sem saltos)
     new_stage = parsed.get("stage", conv_state.get("stage", "situacao"))
+    current_stage = conv_state.get("stage", "situacao")
     if new_stage in VALID_STAGES:
-        conv_state["stage"] = new_stage
+        if new_stage in ("escalado", "frio"):
+            # Estados especiais: sempre permitidos
+            conv_state["stage"] = new_stage
+        elif new_stage == current_stage:
+            pass  # manter stage actual
+        elif current_stage in SPIN_ORDER and new_stage in SPIN_ORDER:
+            cur_idx = SPIN_ORDER.index(current_stage)
+            new_idx = SPIN_ORDER.index(new_stage)
+            if new_idx <= cur_idx + 1:
+                # Avancar max 1 stage ou retroceder: permitido
+                conv_state["stage"] = new_stage
+            else:
+                # Salto: forcar proximo stage na sequencia
+                forced = SPIN_ORDER[min(cur_idx + 1, len(SPIN_ORDER) - 1)]
+                logger.warning(
+                    "SPIN salto bloqueado: %s -> %s (forcado para %s)",
+                    current_stage, new_stage, forced,
+                )
+                conv_state["stage"] = forced
+        else:
+            conv_state["stage"] = new_stage
 
     # 9. Verificar escalacao — GPT + code safety net
     escalation = parsed.get("escalation")
@@ -670,6 +767,31 @@ def handle_incoming_message(phone: str, message: str) -> str | None:
         escalation = {
             "type": "complaint",
             "reason": "Reclamacao detectada na mensagem",
+            "priority": "alta",
+        }
+
+    # Safety net: irritated
+    if not escalation and _detect_irritated(message):
+        escalation = {
+            "type": "irritated",
+            "reason": "Lead irritado detectado na mensagem",
+            "priority": "alta",
+        }
+
+    # Safety net: wants_schedule (vitoria — lead quer agendar)
+    if not escalation and _detect_schedule_intent(message):
+        escalation = {
+            "type": "wants_schedule",
+            "reason": "Lead quer agendar reuniao/diagnostico",
+            "priority": "alta",
+        }
+
+    # Safety net: high_value (dimensao do negocio acima do threshold)
+    nicho = conv_state.get("nicho", "")
+    if not escalation and _detect_high_value(message, nicho):
+        escalation = {
+            "type": "high_value",
+            "reason": "Lead de alto valor detectado (dimensao do negocio)",
             "priority": "alta",
         }
 
