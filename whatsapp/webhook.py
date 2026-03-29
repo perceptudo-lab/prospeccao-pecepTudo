@@ -9,6 +9,7 @@ Uso:
 """
 
 import os
+import threading
 
 from dotenv import load_dotenv
 from flask import Flask, request, jsonify
@@ -86,13 +87,15 @@ def receive_message():
 
         logger.info("Webhook: mensagem de %s: %s", phone, text[:100])
 
-        # Processar com o agente atendente
-        response = handle_incoming_message(phone=phone, message=text)
+        # Processar em background (evita timeout com mensagens multiplas)
+        thread = threading.Thread(
+            target=handle_incoming_message,
+            args=(phone, text),
+            daemon=True,
+        )
+        thread.start()
 
-        if response:
-            return jsonify({"status": "ok", "responded": True}), 200
-        else:
-            return jsonify({"status": "ok", "responded": False}), 200
+        return jsonify({"status": "ok", "processing": True}), 200
 
     except Exception as e:
         logger.error("Erro no webhook: %s", e)

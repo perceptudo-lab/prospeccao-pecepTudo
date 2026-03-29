@@ -1,13 +1,17 @@
-"""Agente de atendimento WhatsApp — responde a leads por nicho.
+"""Agente de atendimento WhatsApp — especialistas por nicho.
 
-Carrega base de conhecimento (.md) do nicho, mantem historico de conversa,
-e escala para o Victor quando detecta intencao de agendamento.
+Cada nicho tem um agente com personalidade propria (ex: Rui para oficinas).
+O agente gera a primeira mensagem de outreach, responde com mensagens
+curtas quebradas, segue metodo SPIN, e escala para o Victor quando detecta
+intencao de agendamento ou outros gatilhos.
 
 Responde 24/7 (sem restricao de horario).
 """
 
 import json
 import os
+import random
+import time
 from datetime import datetime
 from pathlib import Path
 
@@ -27,18 +31,70 @@ CONVERSATION_DIR.mkdir(parents=True, exist_ok=True)
 
 OPENAI_MODEL = os.getenv("OPENAI_AGENT_MODEL", "gpt-5")
 VICTOR_PHONE = os.getenv("VICTOR_PHONE", "351934215049")
-MAX_HISTORY = 20  # Maximo de mensagens no historico por conversa
+MAX_HISTORY = 20
 
-# Keywords que indicam intencao de agendar
-ESCALATION_KEYWORDS = [
-    "agendar", "marcar", "reuniao", "reunião", "meeting",
-    "disponibilidade", "disponivel", "disponível",
-    "hora", "horario", "horário", "quando", "calendario", "calendário",
-    "cal.com", "agendem", "marcacao", "marcação",
-]
+# Aliases: varios nomes de sector apontam para o mesmo directorio de agente
+NICHE_ALIASES = {
+    "oficinas": "oficinas",
+    "oficina": "oficinas",
+    "oficina de automoveis": "oficinas",
+    "oficinas de automoveis": "oficinas",
+    "mecanica": "oficinas",
+    "auto": "oficinas",
+    "contabilidade": "contabilidade",
+    "contabilista": "contabilidade",
+    "contabilistas": "contabilidade",
+    "gabinete de contabilidade": "contabilidade",
+    "gabinetes de contabilidade": "contabilidade",
+    "escritorio de contabilidade": "contabilidade",
+    "escritorios de contabilidade": "contabilidade",
+}
+
+# Tipos de escalacao
+ESCALATION_TYPES = {
+    "price_2x": "Pediu preco pela segunda vez",
+    "irritated": "Lead irritado ou frustrado",
+    "formal_proposal": "Quer proposta formal",
+    "technical_complex": "Questao tecnica complexa",
+    "high_value": "Lead de alto valor",
+    "complaint": "Reclamacao sobre PercepTudo",
+    "wants_schedule": "Quer agendar reuniao",
+}
+
+# Keywords de preco (para tracking code-level)
+PRICE_KEYWORDS = ["preco", "preço", "custo", "custa", "valor", "investimento", "orcamento", "orçamento", "quanto"]
+
+# Keywords de reclamacao (safety net)
+COMPLAINT_KEYWORDS = ["reclamacao", "reclamação", "mau servico", "mau serviço", "fraude", "burla", "enganado"]
 
 # Keywords de opt-out
 OPTOUT_KEYWORDS = ["parar", "stop", "remover", "cancelar", "nao quero", "não quero"]
+
+# SPIN stages
+VALID_STAGES = {"outreach", "situacao", "problema", "implicacao", "solucao", "fecho", "escalado", "frio"}
+
+# Instrucoes JSON adicionadas ao final de cada system prompt
+JSON_FORMAT_INSTRUCTIONS = """
+
+===== FORMATO DE RESPOSTA (OBRIGATORIO) =====
+
+Responde SEMPRE em JSON valido com esta estrutura exacta:
+{
+  "messages": ["mensagem 1", "mensagem 2"],
+  "stage": "situacao",
+  "escalation": null,
+  "internal_notes": "notas internas opcionais"
+}
+
+REGRAS DO JSON:
+- "messages" e uma lista de 1 a 3 mensagens curtas (max 3 frases cada)
+- "stage" reflecte a fase SPIN actual APOS esta resposta: outreach, situacao, problema, implicacao, solucao, fecho, escalado
+- "escalation" e null a menos que um gatilho de escalacao esteja activo
+- Se escalacao: {"type": "price_2x|irritated|formal_proposal|technical_complex|high_value|complaint|wants_schedule", "reason": "motivo", "priority": "normal|alta"}
+- "internal_notes" sao notas internas para contexto (nao enviadas ao lead)
+- Nunca incluas texto fora do JSON
+- Nunca incluas markdown code blocks — apenas JSON puro
+"""
 
 
 def _get_client() -> OpenAI:
@@ -49,118 +105,208 @@ def _get_client() -> OpenAI:
     return OpenAI(api_key=api_key)
 
 
-def _load_knowledge_base(nicho: str) -> str:
-    """Carrega ficheiros .md do nicho para usar como contexto.
+def _resolve_niche(sector: str) -> str:
+    """Resolve alias de nicho para o nome do directorio."""
+    return NICHE_ALIASES.get(sector.strip().lower(), sector.strip().lower())
 
-    Procura em agentes/{nicho}/ pelos ficheiros:
-    - personalidade.md
-    - conhecimento.md
-    - objecoes.md
 
-    Args:
-        nicho: Nome do nicho (ex: 'contabilidade').
+def _load_system_prompt(nicho: str) -> str:
+    """Carrega system prompt do nicho.
 
-    Returns:
-        Texto concatenado de todos os ficheiros encontrados.
+    Tenta system_prompt.md primeiro (formato novo).
+    Fallback para 3 ficheiros antigos (personalidade + conhecimento + objecoes).
     """
-    nicho_dir = AGENTES_DIR / nicho.strip().lower()
+    nicho_resolved = _resolve_niche(nicho)
+    nicho_dir = AGENTES_DIR / nicho_resolved
+
     if not nicho_dir.exists():
         logger.warning("Directorio de agente nao encontrado: %s", nicho_dir)
         return ""
 
+    # Formato novo: ficheiro unico
+    single = nicho_dir / "system_prompt.md"
+    if single.exists():
+        logger.info("System prompt carregado: %s/system_prompt.md", nicho_resolved)
+        return single.read_text(encoding="utf-8")
+
+    # Fallback: 3 ficheiros antigos
     context = ""
     for filename in ["personalidade.md", "conhecimento.md", "objecoes.md"]:
         filepath = nicho_dir / filename
         if filepath.exists():
-            content = filepath.read_text(encoding="utf-8")
-            section_name = filename.replace(".md", "").upper()
-            context += f"\n\n## {section_name}\n\n{content}"
-            logger.info("Base de conhecimento carregada: %s/%s", nicho, filename)
-
+            section = filename.replace(".md", "").upper()
+            context += f"\n\n## {section}\n\n{filepath.read_text(encoding='utf-8')}"
+    if context:
+        logger.info("Knowledge base (3 ficheiros) carregada: %s", nicho_resolved)
     return context
 
 
-def _load_conversation(phone: str) -> list[dict]:
-    """Carrega historico de conversa de um lead.
+def has_niche_agent(sector: str) -> bool:
+    """Verifica se o nicho tem agente especialista (system_prompt.md)."""
+    nicho = _resolve_niche(sector)
+    return (AGENTES_DIR / nicho / "system_prompt.md").exists()
 
-    Args:
-        phone: Telefone normalizado (ex: '351912345678').
 
-    Returns:
-        Lista de mensagens [{role, content, timestamp}].
-    """
+def _build_system_prompt(nicho: str, nome: str, conv_state: dict) -> str:
+    """Monta o system prompt completo: nicho + lead + contexto + JSON."""
+    base = _load_system_prompt(nicho)
+    if not base:
+        base = f"Es o assistente da PercepTudo. Estas a conversar com {nome} via WhatsApp. Responde em PT-PT, max 3 frases por mensagem."
+
+    # Dados do lead
+    lead_data = conv_state.get("lead_data", {})
+    lead_context = f"""
+
+===== LEAD ACTUAL =====
+- Nome: {nome}
+- Cidade: {lead_data.get('cidade', 'N/A')}
+- Rating Google: {lead_data.get('rating', 'N/A')} ({lead_data.get('reviews', 'N/A')} reviews)
+- Website: {lead_data.get('website', 'N/A')}
+- Instagram: {lead_data.get('instagram', 'N/A')}
+"""
+
+    # Estado da conversa
+    stage = conv_state.get("stage", "situacao")
+    price_count = conv_state.get("price_ask_count", 0)
+    msg_count = len(conv_state.get("messages", []))
+    conv_context = f"""
+===== ESTADO DA CONVERSA =====
+- Fase SPIN actual: {stage}
+- Vezes que pediu preco: {price_count}
+- Mensagens trocadas: {msg_count}
+"""
+
+    return base + lead_context + conv_context + JSON_FORMAT_INSTRUCTIONS
+
+
+def _load_conversation_state(phone: str) -> dict:
+    """Carrega estado de conversa. Migra v1 (lista) para v2 (envelope)."""
     phone_clean = phone.replace("+", "").replace(" ", "")
     conv_file = CONVERSATION_DIR / f"{phone_clean}.json"
-    if conv_file.exists():
-        try:
-            data = json.loads(conv_file.read_text(encoding="utf-8"))
-            return data[-MAX_HISTORY:]  # Limitar historico
-        except (json.JSONDecodeError, Exception) as e:
-            logger.warning("Erro ao carregar conversa de %s: %s", phone, e)
-    return []
 
+    if not conv_file.exists():
+        return {
+            "version": 2,
+            "phone": phone_clean,
+            "nome": "",
+            "nicho": "",
+            "stage": "situacao",
+            "price_ask_count": 0,
+            "last_activity": datetime.now().isoformat(),
+            "lead_data": {},
+            "messages": [],
+        }
 
-def _save_conversation(phone: str, history: list[dict]) -> None:
-    """Guarda historico de conversa localmente.
-
-    Args:
-        phone: Telefone normalizado.
-        history: Lista de mensagens.
-    """
-    phone_clean = phone.replace("+", "").replace(" ", "")
-    conv_file = CONVERSATION_DIR / f"{phone_clean}.json"
     try:
-        conv_file.write_text(
-            json.dumps(history[-MAX_HISTORY:], ensure_ascii=False, indent=2),
-            encoding="utf-8",
-        )
+        data = json.loads(conv_file.read_text(encoding="utf-8"))
+
+        # Migracao v1 → v2
+        if isinstance(data, list):
+            logger.info("Migrando conversa v1 para v2: %s", phone_clean)
+            return {
+                "version": 2,
+                "phone": phone_clean,
+                "nome": "",
+                "nicho": "",
+                "stage": "situacao",
+                "price_ask_count": 0,
+                "last_activity": datetime.now().isoformat(),
+                "lead_data": {},
+                "messages": data[-MAX_HISTORY:],
+            }
+
+        # v2
+        data["messages"] = data.get("messages", [])[-MAX_HISTORY:]
+        return data
+
     except Exception as e:
-        logger.error("Erro ao guardar conversa de %s: %s", phone, e)
+        logger.warning("Erro ao carregar conversa %s: %s", phone, e)
+        return {
+            "version": 2, "phone": phone_clean, "nome": "", "nicho": "",
+            "stage": "situacao", "price_ask_count": 0,
+            "last_activity": datetime.now().isoformat(),
+            "lead_data": {}, "messages": [],
+        }
 
 
-def _detect_escalation(message: str) -> bool:
-    """Detecta intencao de agendamento na mensagem.
+def _save_conversation_state(phone: str, state: dict) -> None:
+    """Guarda estado de conversa."""
+    phone_clean = phone.replace("+", "").replace(" ", "")
+    conv_file = CONVERSATION_DIR / f"{phone_clean}.json"
+    state["messages"] = state.get("messages", [])[-MAX_HISTORY:]
+    state["last_activity"] = datetime.now().isoformat()
+    try:
+        conv_file.write_text(json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8")
+    except Exception as e:
+        logger.error("Erro ao guardar conversa %s: %s", phone, e)
 
-    Args:
-        message: Texto da mensagem do lead.
 
-    Returns:
-        True se contem keywords de agendamento.
-    """
-    msg_lower = message.lower()
-    return any(kw in msg_lower for kw in ESCALATION_KEYWORDS)
+def _parse_gpt_response(raw: str, current_stage: str) -> dict:
+    """Parse JSON do GPT com fallback para texto livre."""
+    cleaned = raw.strip()
+    if cleaned.startswith("```"):
+        lines = cleaned.split("\n")
+        lines = [l for l in lines if not l.strip().startswith("```")]
+        cleaned = "\n".join(lines)
+
+    try:
+        data = json.loads(cleaned)
+        if "messages" not in data or not isinstance(data["messages"], list):
+            raise ValueError("Campo 'messages' invalido")
+        data.setdefault("stage", current_stage)
+        data.setdefault("escalation", None)
+        data.setdefault("internal_notes", "")
+        return data
+    except (json.JSONDecodeError, ValueError) as e:
+        logger.warning("GPT nao retornou JSON valido: %s — fallback texto", e)
+        return {
+            "messages": [raw.strip()],
+            "stage": current_stage,
+            "escalation": None,
+            "internal_notes": "fallback: GPT retornou texto livre",
+        }
+
+
+def _send_split_messages(phone: str, messages: list[str]) -> bool:
+    """Envia multiplas mensagens com delay humano entre elas."""
+    for i, msg in enumerate(messages):
+        if not msg.strip():
+            continue
+        success = send_text(phone, msg)
+        if not success:
+            logger.error("Falha ao enviar msg %d/%d para %s", i + 1, len(messages), phone)
+            return False
+        if i < len(messages) - 1:
+            time.sleep(random.uniform(1.0, 2.5))
+    return True
 
 
 def _detect_optout(message: str) -> bool:
-    """Detecta pedido de opt-out.
-
-    Args:
-        message: Texto da mensagem do lead.
-
-    Returns:
-        True se contem keywords de opt-out.
-    """
+    """Detecta pedido de opt-out."""
     msg_lower = message.strip().lower()
     return any(kw in msg_lower for kw in OPTOUT_KEYWORDS)
 
 
+def _detect_price_ask(message: str) -> bool:
+    """Detecta se o lead perguntou sobre preco."""
+    msg_lower = message.lower()
+    return any(kw in msg_lower for kw in PRICE_KEYWORDS)
+
+
+def _detect_complaint(message: str) -> bool:
+    """Detecta reclamacao (safety net)."""
+    msg_lower = message.lower()
+    return any(kw in msg_lower for kw in COMPLAINT_KEYWORDS)
+
+
 def _find_lead_by_phone(phone: str) -> dict | None:
-    """Procura lead no Sheets pelo telefone.
-
-    Args:
-        phone: Telefone do lead.
-
-    Returns:
-        Dict do lead ou None se nao encontrado.
-    """
-    # Procurar em todos os estados relevantes
+    """Procura lead no Sheets pelo telefone."""
     states = [
         "contactado", "followup_1", "followup_2", "followup_3",
-        "respondeu", "agendado",
+        "respondeu", "agendado", "pronto_para_envio",
     ]
     leads = get_leads_by_statuses(states)
     phone_clean = phone.replace("+", "").replace(" ", "")[-9:]
-
     for lead in leads:
         lead_phone = str(lead.get("Telefone", "")).replace("+", "").replace(" ", "")
         if lead_phone.endswith(phone_clean):
@@ -168,54 +314,131 @@ def _find_lead_by_phone(phone: str) -> dict | None:
     return None
 
 
-def _notify_victor(phone: str, nome: str, nicho: str, message: str, history_len: int) -> None:
-    """Envia alerta ao Victor sobre lead com intencao de agendar.
+def _handle_escalation(
+    phone: str, nome: str, nicho: str,
+    escalation_data: dict, history_len: int,
+) -> None:
+    """Envia alerta detalhado ao Victor e actualiza estado."""
+    esc_type = escalation_data.get("type", "unknown")
+    reason = escalation_data.get("reason", "")
+    priority = escalation_data.get("priority", "normal")
 
-    Args:
-        phone: Telefone do lead.
-        nome: Nome do negocio.
-        nicho: Sector/nicho.
-        message: Ultima mensagem do lead.
-        history_len: Numero de mensagens trocadas.
-    """
+    priority_label = "URGENTE " if priority == "alta" else ""
     alert = (
-        f"Lead quer agendar!\n\n"
+        f"{priority_label}Escalacao: {esc_type}\n\n"
         f"Nome: {nome}\n"
         f"Telefone: +{phone.replace('+', '')}\n"
         f"Nicho: {nicho}\n"
-        f"Mensagem: \"{message[:200]}\"\n"
-        f"Historico: {history_len} mensagens trocadas"
+        f"Motivo: {reason}\n"
+        f"Mensagens trocadas: {history_len}"
     )
 
     try:
-        success = send_text(VICTOR_PHONE, alert)
-        if success:
-            logger.info("Alerta enviado ao Victor sobre '%s'", nome)
-        else:
-            logger.error("Falha ao enviar alerta ao Victor sobre '%s'", nome)
+        send_text(VICTOR_PHONE, alert)
+        logger.info("Alerta enviado ao Victor: %s (%s)", nome, esc_type)
     except Exception as e:
         logger.error("Erro ao notificar Victor: %s", e)
+
+    # Actualizar Sheets
+    telefone_str = str(phone)
+    update_lead_status(
+        telefone_str, "agendado",
+        extra_data={"notas": f"Escalado: {esc_type} - {reason}"},
+    )
+
+
+def generate_outreach_message(
+    nome: str, sector: str, lead_data: dict,
+) -> tuple[list[str], dict]:
+    """Gera primeira mensagem de outreach usando o agente especialista.
+
+    Args:
+        nome: Nome da empresa.
+        sector: Sector/nicho.
+        lead_data: Dados do lead (cidade, rating, website, etc).
+
+    Returns:
+        Tupla (lista de mensagens, estado de conversa criado).
+    """
+    nicho = _resolve_niche(sector)
+    phone = lead_data.get("telefone", "").replace("+", "").replace(" ", "")
+
+    # Criar estado de conversa
+    conv_state = {
+        "version": 2,
+        "phone": phone,
+        "nome": nome,
+        "nicho": nicho,
+        "stage": "outreach",
+        "price_ask_count": 0,
+        "last_activity": datetime.now().isoformat(),
+        "lead_data": lead_data,
+        "messages": [],
+    }
+
+    system_prompt = _build_system_prompt(nicho, nome, conv_state)
+
+    user_msg = (
+        f"Gera a primeira mensagem de outreach para {nome}. "
+        f"E cold outreach — a empresa nunca ouviu falar da PercepTudo. "
+        f"O PDF de diagnostico vai em anexo a seguir a esta mensagem. "
+        f"Cria curiosidade para abrirem o PDF. "
+        f"Menciona as dores do sector de forma directa. "
+        f"Max 2-3 mensagens curtas."
+    )
+
+    try:
+        client = _get_client()
+        response = client.chat.completions.create(
+            model=OPENAI_MODEL,
+            response_format={"type": "json_object"},
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_msg},
+            ],
+        )
+
+        parsed = _parse_gpt_response(
+            response.choices[0].message.content or "", "outreach"
+        )
+        messages = parsed["messages"]
+
+    except Exception as e:
+        logger.error("Erro ao gerar outreach para '%s': %s", nome, e)
+        messages = [
+            f"Bom dia, {nome}!",
+            f"Preparamos um diagnostico gratuito para a vossa oficina — com dados concretos do sector e oportunidades de melhoria. Segue em anexo.",
+        ]
+
+    # Guardar mensagens no estado
+    for msg in messages:
+        conv_state["messages"].append({
+            "role": "assistant",
+            "content": msg,
+            "timestamp": datetime.now().isoformat(),
+        })
+
+    logger.info("Outreach gerado para '%s': %d mensagens", nome, len(messages))
+    return messages, conv_state
 
 
 def handle_incoming_message(phone: str, message: str) -> str | None:
     """Processa mensagem recebida de um lead e gera resposta.
 
     Fluxo:
-    1. Responde 24/7 (sem restricao de horario)
-    2. Verifica se lead esta em estado 'agendado' -> NAO responde
-    3. Detecta opt-out -> estado 'removido', despedida
-    4. Actualiza estado para 'respondeu' (primeira resposta)
-    5. Carrega knowledge base + historico
-    6. GPT-5 gera resposta
-    7. Detecta escalacao -> notifica Victor, estado 'agendado', para
-    8. Guarda conversa, envia resposta
-
-    Args:
-        phone: Telefone do remetente.
-        message: Texto da mensagem recebida.
+    1. Responde 24/7
+    2. Verifica estado agendado/removido → nao responde
+    3. Detecta opt-out → estado removido
+    4. Actualiza estado para respondeu
+    5. Carrega conversa + knowledge base
+    6. Tracking: price_ask_count
+    7. GPT gera resposta JSON
+    8. Verifica escalacao (GPT + code safety net)
+    9. Envia mensagens quebradas
+    10. Guarda estado
 
     Returns:
-        Texto da resposta enviada, ou None se nao respondeu.
+        Ultima mensagem enviada, ou None se nao respondeu.
     """
     logger.info("Mensagem recebida de %s: %s", phone, message[:100])
 
@@ -226,17 +449,17 @@ def handle_incoming_message(phone: str, message: str) -> str | None:
     estado = lead.get("Estado", "").strip().lower() if lead else ""
     telefone = str(lead.get("Telefone", phone)) if lead else str(phone)
 
-    # 1. Se estado = 'agendado' -> nao responder (Victor trata)
+    # 1. Estado agendado → nao responder
     if estado == "agendado":
-        logger.info("Lead '%s' ja esta agendado — ignorando", nome)
+        logger.info("Lead '%s' agendado — ignorando", nome)
         return None
 
-    # 2. Se estado = 'removido' -> nao responder
+    # 2. Estado removido → nao responder
     if estado == "removido":
-        logger.info("Lead '%s' esta removido — ignorando", nome)
+        logger.info("Lead '%s' removido — ignorando", nome)
         return None
 
-    # 3. Detectar opt-out
+    # 3. Opt-out
     if _detect_optout(message):
         logger.info("Opt-out detectado de '%s'", nome)
         resposta = (
@@ -248,104 +471,133 @@ def handle_incoming_message(phone: str, message: str) -> str | None:
             update_lead_status(telefone, "removido")
         return resposta
 
-    # 4. Actualizar estado para 'respondeu' (se ainda nao esta)
+    # 4. Actualizar estado para respondeu
     if lead and estado not in ("respondeu", "agendado"):
         update_lead_status(telefone, "respondeu")
-        logger.info("Lead '%s' actualizado para 'respondeu'", nome)
 
-    # 5. Carregar knowledge base + historico
-    knowledge = _load_knowledge_base(nicho) if nicho else ""
-    history = _load_conversation(phone)
+    # 5. Carregar estado de conversa
+    conv_state = _load_conversation_state(phone)
+
+    # Enriquecer estado com dados do lead se nao tinha
+    if not conv_state.get("nome") and nome != "Cliente":
+        conv_state["nome"] = nome
+    if not conv_state.get("nicho") and nicho:
+        conv_state["nicho"] = _resolve_niche(nicho)
+    if not conv_state.get("lead_data") or not conv_state["lead_data"]:
+        if lead:
+            conv_state["lead_data"] = {
+                "cidade": lead.get("Cidade", ""),
+                "rating": str(lead.get("Rating", "")),
+                "reviews": str(lead.get("Reviews", "")),
+                "website": lead.get("Website", ""),
+                "instagram": lead.get("Instagram", ""),
+            }
 
     # Adicionar mensagem do lead ao historico
-    history.append({
+    conv_state["messages"].append({
         "role": "user",
         "content": message,
         "timestamp": datetime.now().isoformat(),
     })
 
-    # 6. Gerar resposta via GPT-5
-    system_prompt = f"""Es o assistente da PercepTudo, uma consultoria de inteligencia aplicada (IA) para pequenas e medias empresas em Portugal.
+    # 6. Tracking: price_ask_count
+    if _detect_price_ask(message):
+        conv_state["price_ask_count"] = conv_state.get("price_ask_count", 0) + 1
+        logger.info("Price ask count para '%s': %d", nome, conv_state["price_ask_count"])
 
-Estas a conversar com {nome} (sector: {nicho or 'desconhecido'}) via WhatsApp.
+    # Se stage era outreach e lead respondeu, avanca para situacao
+    if conv_state.get("stage") == "outreach":
+        conv_state["stage"] = "situacao"
 
-REGRAS:
-- Responde SEMPRE em PT-PT (nunca PT-BR)
-- Tom: profissional mas acessivel, como especialista no cafe
-- Respostas curtas (2-4 frases max) — e WhatsApp, nao email
-- NAO inventes dados ou precos
-- NAO prometas prazos ou resultados especificos
-- Se nao sabes a resposta, diz que vais confirmar internamente
-- Precos e detalhes de implementacao sao discutidos na reuniao
-- NUNCA digas que es uma IA ou bot — tu es parte da equipa PercepTudo
-- Se o lead perguntar sobre precos, diz que depende do diagnostico e que e discutido na reuniao
-- Se mostrar interesse em agendar, encoraja e diz que o Victor vai entrar em contacto
+    # 7. Gerar resposta via GPT
+    nicho_resolved = conv_state.get("nicho", "") or _resolve_niche(nicho)
+    system_prompt = _build_system_prompt(nicho_resolved, nome, conv_state)
 
-{knowledge}"""
-
-    # Construir mensagens para o GPT (sem timestamps)
     gpt_messages = [{"role": "system", "content": system_prompt}]
-    for msg in history[-MAX_HISTORY:]:
-        gpt_messages.append({
-            "role": msg["role"],
-            "content": msg["content"],
-        })
+    for msg in conv_state["messages"][-MAX_HISTORY:]:
+        gpt_messages.append({"role": msg["role"], "content": msg["content"]})
 
     try:
         client = _get_client()
         response = client.chat.completions.create(
             model=OPENAI_MODEL,
+            response_format={"type": "json_object"},
             messages=gpt_messages,
         )
-        resposta = response.choices[0].message.content.strip()
+        parsed = _parse_gpt_response(
+            response.choices[0].message.content or "",
+            conv_state.get("stage", "situacao"),
+        )
     except Exception as e:
         logger.error("Erro ao gerar resposta para '%s': %s", nome, e)
-        resposta = f"Obrigado pela mensagem, {nome}. Vou confirmar internamente e volto a contactar brevemente."
+        parsed = {
+            "messages": [f"Obrigado pela mensagem, {nome}. Vou confirmar internamente e volto a contactar brevemente."],
+            "stage": conv_state.get("stage", "situacao"),
+            "escalation": None,
+        }
 
-    # 7. Detectar escalacao (na mensagem do lead OU na resposta do GPT)
-    if _detect_escalation(message) or _detect_escalation(resposta):
-        logger.info("Escalacao detectada para '%s' — a notificar Victor", nome)
+    # 8. Actualizar stage
+    new_stage = parsed.get("stage", conv_state.get("stage", "situacao"))
+    if new_stage in VALID_STAGES:
+        conv_state["stage"] = new_stage
 
-        # Responder ao lead
-        resposta_escalacao = (
-            f"Excelente, {nome}! Vou pedir ao Victor para entrar em contacto "
-            f"consigo para combinarem a melhor hora. Ate breve!"
-        )
-        send_text(telefone, resposta_escalacao)
+    # 9. Verificar escalacao — GPT + code safety net
+    escalation = parsed.get("escalation")
+
+    # Safety net: price_ask_count >= 2
+    if not escalation and conv_state.get("price_ask_count", 0) >= 2:
+        escalation = {
+            "type": "price_2x",
+            "reason": f"Pediu preco {conv_state['price_ask_count']} vezes",
+            "priority": "alta",
+        }
+
+    # Safety net: complaint
+    if not escalation and _detect_complaint(message):
+        escalation = {
+            "type": "complaint",
+            "reason": "Reclamacao detectada na mensagem",
+            "priority": "alta",
+        }
+
+    if escalation:
+        logger.info("Escalacao para '%s': %s", nome, escalation.get("type"))
+        conv_state["stage"] = "escalado"
+
+        # Enviar mensagens do GPT (que ja incluem despedida de escalacao)
+        _send_split_messages(telefone, parsed["messages"])
 
         # Notificar Victor
-        _notify_victor(
+        _handle_escalation(
             phone=telefone,
             nome=nome,
-            nicho=nicho,
-            message=message,
-            history_len=len(history),
+            nicho=nicho_resolved,
+            escalation_data=escalation,
+            history_len=len(conv_state["messages"]),
         )
 
-        # Actualizar estado
-        if lead:
-            update_lead_status(telefone, "agendado")
+        # Guardar mensagens no historico
+        for msg in parsed["messages"]:
+            conv_state["messages"].append({
+                "role": "assistant",
+                "content": msg,
+                "timestamp": datetime.now().isoformat(),
+            })
+        _save_conversation_state(phone, conv_state)
+        return parsed["messages"][-1] if parsed["messages"] else None
 
-        # Guardar conversa
-        history.append({
+    # 10. Enviar resposta normal (mensagens quebradas)
+    _send_split_messages(telefone, parsed["messages"])
+
+    # Guardar no historico
+    for msg in parsed["messages"]:
+        conv_state["messages"].append({
             "role": "assistant",
-            "content": resposta_escalacao,
+            "content": msg,
             "timestamp": datetime.now().isoformat(),
         })
-        _save_conversation(phone, history)
+    _save_conversation_state(phone, conv_state)
 
-        return resposta_escalacao
-
-    # 8. Enviar resposta normal
-    send_text(telefone, resposta)
-
-    # Guardar conversa
-    history.append({
-        "role": "assistant",
-        "content": resposta,
-        "timestamp": datetime.now().isoformat(),
-    })
-    _save_conversation(phone, history)
-
-    logger.info("Resposta enviada a '%s': %s", nome, resposta[:100])
-    return resposta
+    logger.info("Resposta enviada a '%s' (%d msgs, stage=%s)",
+                nome, len(parsed["messages"]), conv_state["stage"])
+    return parsed["messages"][-1] if parsed["messages"] else None

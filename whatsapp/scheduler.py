@@ -16,9 +16,10 @@ from crm.sheets import (
     get_leads_needing_followup,
     update_lead_status,
 )
+from agentes.atendente import generate_outreach_message, has_niche_agent, _save_conversation_state, _send_split_messages
 from scraper.utils import setup_logger
 from whatsapp.message_generator import generate_message
-from whatsapp.sender import check_is_whatsapp, send_lead_message
+from whatsapp.sender import check_is_whatsapp, send_lead_message, send_pdf, send_text
 
 load_dotenv()
 logger = setup_logger(__name__)
@@ -205,37 +206,66 @@ def send_daily_batch(dry_run: bool = False) -> dict:
             print(f"    x Nao esta no WhatsApp")
             continue
 
-        # Gerar mensagem variada
-        try:
-            mensagem = generate_message(nome, sector, touch=touch)
-        except Exception as e:
-            logger.error("Erro ao gerar mensagem para '%s': %s", nome, e)
-            stats["erros"] += 1
-            continue
-
-        # Enviar: texto + PDF (touch 1) ou so texto (follow-ups)
+        # PDF so no touch 1
         pdf_path = pdf_link if touch == 1 else None
         if touch == 1 and not pdf_path:
             logger.warning("Lead '%s' sem PDF para touch 1 — a saltar", nome)
             stats["saltados"] += 1
             continue
 
+        # Touch 1 + agente especialista: Rui/Nuno gera outreach
+        use_agent = touch == 1 and has_niche_agent(sector)
+
+        if use_agent:
+            try:
+                lead_data = {
+                    "telefone": telefone,
+                    "cidade": lead.get("Cidade", ""),
+                    "rating": str(lead.get("Rating", "")),
+                    "reviews": str(lead.get("Reviews", "")),
+                    "website": lead.get("Website", ""),
+                    "instagram": lead.get("Instagram", ""),
+                }
+                msgs, conv_state = generate_outreach_message(nome, sector, lead_data)
+                mensagem = " | ".join(msgs)  # Para logs/Sheets
+            except Exception as e:
+                logger.error("Erro ao gerar outreach agente para '%s': %s", nome, e)
+                stats["erros"] += 1
+                continue
+        else:
+            try:
+                mensagem = generate_message(nome, sector, touch=touch)
+                msgs = [mensagem]
+                conv_state = None
+            except Exception as e:
+                logger.error("Erro ao gerar mensagem para '%s': %s", nome, e)
+                stats["erros"] += 1
+                continue
+
         if dry_run:
-            # Simular — mostrar mensagem sem enviar
             count_enviados += 1
             stats["enviados"] += 1
             estado_actual = lead.get("Estado", "").strip().lower()
             novo_estado = NEXT_STATE.get(estado_actual, "contactado")
             proximo_followup = _next_followup_date(touch)
-            print(f"    [DRY-RUN] Mensagem ({len(mensagem)} chars):")
-            print(f"    {mensagem[:120]}...")
+            agent_label = " [AGENTE]" if use_agent else ""
+            print(f"    [DRY-RUN]{agent_label} {len(msgs)} msg(s):")
+            for m in msgs:
+                print(f"    > {m[:100]}...")
             print(f"    -> {novo_estado} | follow-up: {proximo_followup or 'nenhum'}")
         else:
-            success = send_lead_message(
-                phone=telefone,
-                message=mensagem,
-                pdf_path=pdf_path,
-            )
+            # Enviar mensagens
+            if use_agent:
+                success = _send_split_messages(telefone, msgs)
+                if success and pdf_path:
+                    time.sleep(random.uniform(2, 5))
+                    success = send_pdf(telefone, pdf_path)
+            else:
+                success = send_lead_message(
+                    phone=telefone,
+                    message=mensagem,
+                    pdf_path=pdf_path,
+                )
 
             if success:
                 count_enviados += 1
@@ -261,11 +291,17 @@ def send_daily_batch(dry_run: bool = False) -> dict:
                     extra_data[followup_key] = datetime.now().strftime("%Y-%m-%d %H:%M")
 
                 update_lead_status(telefone, novo_estado, extra_data)
+
+                # Guardar estado de conversa (se agente especialista)
+                if conv_state:
+                    _save_conversation_state(telefone, conv_state)
+
                 logger.info(
-                    "'%s' enviado (touch %d) -> estado '%s'",
+                    "'%s' enviado (touch %d) -> estado '%s'%s",
                     nome, touch, novo_estado,
+                    " [AGENTE]" if use_agent else "",
                 )
-                print(f"    + Enviado (-> {novo_estado})")
+                print(f"    + Enviado (-> {novo_estado}{'  [AGENTE]' if use_agent else ''})")
             else:
                 stats["erros"] += 1
                 logger.error("Falha ao enviar para '%s'", nome)
