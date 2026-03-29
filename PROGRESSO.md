@@ -194,27 +194,167 @@ Aplicada formatacao visual ao Sheets:
 
 ---
 
-## Estado actual do Sheets
+---
 
-20 leads de contabilidade em Lisboa com estado `pronto_para_envio`. PDFs gerados, mensagens WhatsApp preenchidas.
+## Sessao 4: 29 Marco 2026 (tarde)
+
+### Overhaul completo do sistema
+
+Reestruturacao major do sistema inteiro. Objectivo: simplificar PDF (sem IA), scheduler com follow-ups, agente atendente especialista por nicho.
+
+### Decisoes de negocio tomadas nesta sessao
+
+- **PDF simplificado**: templates fixos por nicho, so {NOME_EMPRESA}/{WEBSITE}/{INSTAGRAM}. Zero GPT-5 na geracao.
+- **Meta diaria**: ~80 mensagens/dia, janela 9:00-13:00
+- **Follow-ups**: 4 toques (dia 0, 3, 7, 14) → frio
+- **3 numeros WhatsApp** para chegar a 100/dia (futuro, nao implementado ainda)
+- **Agentes especialistas**: cada nicho tem agente proprio (Rui para oficinas, Nuno para contabilidade)
+- **Agente gera outreach**: o mesmo agente que atende e quem faz a primeira mensagem
+- **Escalacao para Victor**: 7 gatilhos (preco 2x, irritado, proposta formal, alto valor, etc)
+
+### O que foi construido
+
+#### 1. PDF simplificado
+- `pdf/html_generator.py` reescrito de ~750 para ~110 linhas
+- `pdf/orchestrator.py` simplificado — sem enrichment, so template + nome
+- Templates so substituem {NOME_EMPRESA}, {WEBSITE}, {INSTAGRAM}
+- **60 PDFs de contabilidade gerados** (linhas 2-61 do Sheets, 0 erros, ~4s cada)
+
+#### 2. Gerador de mensagens WhatsApp
+- `whatsapp/message_generator.py` — GPT-5 gera mensagens variadas (anti-spam)
+- 4 variantes de touch (outreach, follow-up curto, angulo diferente, despedida)
+- Dores fixas por sector em dict SECTOR_PAINS
+- Opt-out automatico em todas as mensagens
+- Custo: ~$0.008/mensagem
+
+#### 3. Scheduler com follow-ups
+- `whatsapp/scheduler.py` reescrito — janela 9-13h, intervalos 3-7min, pausas a cada 10 msgs
+- Mix: follow-ups primeiro (mais quentes), depois novos leads
+- `whatsapp/followup.py` — logica de follow-up (4 toques com intervalos)
+- Modo --dry-run para simulacao
+
+#### 4. Agente atendente avancado
+- `agentes/atendente.py` reescrito completo (~400 linhas)
+- Respostas GPT em JSON estruturado: messages[], stage, escalation
+- Mensagens quebradas com delay 1-2.5s (parece humano)
+- Metodo SPIN: outreach → situacao → problema → implicacao → solucao → fecho
+- Escalacao inteligente: GPT classifica + code safety net (price_ask_count, complaint)
+- Estado de conversa v2: envelope JSON com lead_data, stage, price tracking
+- Buffer de 15s no webhook: junta mensagens rapidas antes de processar
+
+#### 5. Agente Rui (oficinas)
+- `agentes/oficinas/system_prompt.md` — 400+ linhas
+- Personalidade: directo, pratico, especialista em oficinas
+- Vocabulario: baias, folha de obra, tempario, ANECRA, PHC
+- Metodo SPIN adaptado a oficinas
+- Sabe o que esta no PDF (4 dores + solucoes concretas)
+- Objecoes: "e caro", "nao percebo de tecnologia", "ja tentei", etc
+- Exemplos de conversa completos
+- Escalacao com gatilhos proprios
+
+#### 6. Novos estados no Sheets
+- Colunas adicionadas: Follow-up 3, Proximo Follow-up, Touch Actual
+- Estados: followup_1, followup_2, followup_3, agendado
+- Funcoes: get_leads_needing_followup(), get_leads_by_statuses()
+- Suporte a credenciais Google via env var (Docker)
+
+#### 7. Deploy na VPS (Easypanel)
+- Dockerfile + docker-compose.yml
+- Servico "agente" online 24/7 em https://perceptudo-agente.6mfvzj.easypanel.host
+- Webhook Evolution API configurado
+- GitHub: https://github.com/perceptudo-lab/prospeccao-pecepTudo
+
+#### 8. Template contabilidade actualizado
+- Copiado novo template de /Desktop/prospecting-contabilidade.html
+- Removidos placeholders antigos ({SETOR}, {NOME_DECISOR}, {CARGO}, {DATA})
+- Adicionados {WEBSITE} e {INSTAGRAM} na capa com badges visuais
+- Nome empresa responsivo (clamp + word-break)
+- 60 PDFs regenerados com novo template
+
+### Testes realizados
+
+| Teste | Resultado |
+|-------|----------|
+| PDF com nome gigante | OK — responsivo |
+| 60 PDFs batch contabilidade | 60/60 OK, 0 erros |
+| Mensagem GPT-5 (4 touches) | OK — todas diferentes |
+| Envio real mensagem + PDF | OK — chegou no WhatsApp |
+| Agente responde (VPS) | OK — mensagens quebradas |
+| Agente com contexto oficinas | OK — vocabulario correcto |
+| Escalacao (agendar) | OK — Victor recebe alerta |
+| Opt-out (PARAR) | OK — estado removido |
+| Health check VPS | OK — https://...6mfvzj.easypanel.host/health |
+
+### Metricas de custo (estimadas)
+
+| Item | Custo |
+|------|-------|
+| Dry-run 60 leads (teste) | ~$2 OpenAI |
+| Mensagem outreach (por lead) | ~$0.008 |
+| Resposta agente (por msg) | ~$0.01-0.02 |
+| 80 msgs/dia + respostas | ~$0.80-1.00/dia |
+| Meta mensal OpenAI | ~$19-25 |
+
+### Directrizes WhatsApp (anti-spam)
+
+| Parametro | Valor |
+|-----------|-------|
+| Limite diario (numero aquecido) | 80 msgs |
+| Janela de envio | 09:00-13:00 |
+| Intervalo entre msgs | 3-7 min aleatorio |
+| Pausa a cada 10 msgs | 15-30 min |
+| Follow-ups | 4 toques (dia 0, 3, 7, 14) |
+| Buffer resposta | 15s (junta msgs rapidas) |
+| Opt-out | Obrigatorio em todas as msgs |
+
+### Funil de conversao esperado (conservador)
+
+| Metrica | Mensal (~1.760 msgs) |
+|---------|---------------------|
+| Respostas positivas | 55-90 |
+| Reunioes marcadas | 25-45 |
+| Clientes fechados | 5-13 |
+
+---
+
+## Estado actual
+
+### Sheets
+- 60 leads contabilidade Lisboa com estado `pronto_para_envio` (PDFs gerados)
+- 60+ leads de outros sectores/cidades com estado `novo`
+- 1 lead teste (AutoTop Oficina) com estado `contactado`
+
+### VPS (Easypanel)
+- Servico agente: ONLINE 24/7
+- Webhook Evolution API: CONFIGURADO
+- Template oficinas: POR SUBIR (HTML no Desktop)
+
+### GitHub
+- Repo: perceptudo-lab/prospeccao-pecepTudo (publico temporariamente)
+- Ultimo commit: buffer 15s + agente Rui
 
 ---
 
 ## O que falta fazer
 
-### Prioridade alta
-- [x] ~~Testar pipeline completo: raspar → revisar Sheets → gerar PDFs~~ (feito sessao 3)
-- [x] ~~Validar PDFs gerados com a nova ordem (dores antes de oportunidades)~~ (feito sessao 3)
-- [ ] Enviar WhatsApp para os 20 leads prontos (quando o Victor decidir)
-- [ ] Mais templates HTML por nicho (advocacia, clinicas, imobiliarias, restauracao)
+### Prioridade alta (para amanha 30 Marco)
+- [ ] Subir template HTML oficinas + gerar PDFs oficinas
+- [ ] Disparar envio real contabilidade (60 leads)
+- [ ] Disparar envio real oficinas
+- [ ] Afinar tom da primeira mensagem (outreach)
+- [ ] Criar system_prompt.md completo para Nuno (contabilidade) — Victor fornece ficheiro
+- [ ] Volume persistente no Easypanel para conversas (sobreviver a redeploys)
+- [ ] Tornar repo GitHub privado + conectar Easypanel ao GitHub
 
 ### Prioridade media
-- [ ] Follow-ups automaticos (`followup/cron_followup.py`)
-- [ ] Git — inicializar repositorio e fazer primeiro commit
+- [ ] Mais nichos (restauracao, advocacia, clinicas)
+- [ ] Cron job na VPS para scheduler automatico as 9h
+- [ ] Follow-up mid-conversa (leads que pararam de responder ao agente)
 
 ### Prioridade baixa
 - [ ] Testes automatizados
-- [ ] `scraper/instagram_search.py` — pesquisa IG por keywords (pausado)
+- [ ] Monitoramento de block rate / report rate
+- [ ] 3 numeros WhatsApp para chegar a 100/dia
 
 ---
 
@@ -223,7 +363,8 @@ Aplicada formatacao visual ao Sheets:
 | Servico | Estado |
 |---------|--------|
 | Google Maps Places API | OK ($300 credito gratis 90 dias) |
-| Apify (Instagram) | OK (plano gratis $5/mes) |
+| Apify (Instagram + Reviews) | OK (plano gratis $5/mes) |
 | OpenAI GPT-5 | OK (Chat Completions API) |
-| Google Sheets | OK (service account + spreadsheet) |
+| Google Sheets | OK (service account + env var inline para Docker) |
 | Evolution API (WhatsApp) | OK (VPS Easypanel, instancia "PercepTudo") |
+| Flask webhook (VPS) | OK (https://perceptudo-agente.6mfvzj.easypanel.host) |

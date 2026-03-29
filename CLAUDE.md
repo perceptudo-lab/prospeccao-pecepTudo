@@ -2,24 +2,27 @@
 
 ## O que e este projecto
 
-Sistema de prospeccao automatica para a PercepTudo, uma consultoria de inteligencia aplicada (IA) para PMEs em Portugal. O sistema encontra empresas, analisa o negocio com IA, gera um PDF de diagnostico personalizado, e envia por WhatsApp.
+Sistema de prospeccao automatica para a PercepTudo, uma consultoria de inteligencia aplicada (IA) para PMEs em Portugal. O sistema encontra empresas, gera um PDF de diagnostico fixo por nicho, envia por WhatsApp com mensagem personalizada, e um agente especialista atende as respostas.
 
-**Fluxo em duas fases (o Victor controla tudo):**
+**Fluxo em tres fases:**
 
-1. **Raspagem** (barata) — Victor corre `python main.py --nicho X --cidade Y` quantas vezes quiser. Raspa Google Maps, enriquece com dados do site e Instagram, grava no Sheets com estado "novo". Sem gastar OpenAI.
+1. **Raspagem** (barata) — Victor corre `python main.py scrape --nicho X --cidade Y`. Raspa Google Maps, enriquece com dados do site e Instagram, grava no Sheets com estado "novo". Sem gastar OpenAI.
 
-2. **Geracao + Envio** (manual) — Victor pede no terminal: "Gera PDFs e envia para os contabilistas de Leiria". Claude Code busca do Sheets, gera analise AI + PDF, envia WhatsApp. Victor decide quando e para quem.
+2. **Geracao de PDF** (barata, sem IA) — `python main.py gerar --nicho X --cidade Y`. Template HTML fixo por nicho, so substitui {NOME_EMPRESA}, {WEBSITE}, {INSTAGRAM}. Playwright converte para PDF.
+
+3. **Envio + Atendimento** (automatico) — `python main.py enviar-dia`. Scheduler envia mensagens (GPT-5 gera variacao) + PDF na janela 9-13h, max 80/dia. Agente especialista (Rui/Nuno) responde 24/7 quando o lead responde.
 
 ## Stack
 
 - **Python 3.11+** — linguagem principal
 - **Google Maps Places API** — pesquisa de empresas
-- **Apify** (plano gratis $5/mes) — scraping de Instagram
-- **Playwright** — analise automatica de websites + conversao HTML→PDF
-- **OpenAI GPT-5** (Chat Completions API) — analise de negocio + diagnostico
-- **reportlab** (Python) — geracao de PDF generico (nichos sem template HTML)
-- **Evolution API** — envio WhatsApp (VPS Easypanel)
+- **Apify** (plano gratis $5/mes) — scraping de Instagram + Google Reviews
+- **Playwright** — analise de websites + conversao HTML→PDF
+- **OpenAI GPT-5** — geracao de mensagens WhatsApp + agente atendente
+- **Flask** — webhook server para receber mensagens WhatsApp
+- **Evolution API** — envio/recepcao WhatsApp (VPS Easypanel)
 - **Google Sheets API** — CRM (source of truth)
+- **Docker + Easypanel** — deploy na VPS
 
 ## Estrutura do projecto
 
@@ -27,190 +30,219 @@ Sistema de prospeccao automatica para a PercepTudo, uma consultoria de inteligen
 perceptudo-prospector/
 ├── CLAUDE.md                    # Este ficheiro
 ├── PROGRESSO.md                 # Historico de progresso
+├── Dockerfile                   # Build para Easypanel
+├── docker-compose.yml           # Agente 24/7 + scheduler cron
 ├── .env                         # API keys (NAO commitar)
 ├── requirements.txt             # Dependencias Python
-├── main.py                      # CLI principal: scrape, gerar, enviar, status
+├── main.py                      # CLI: scrape, gerar, enviar, enviar-dia, agente, status
 │
 ├── scraper/
-│   ├── __init__.py
 │   ├── utils.py                 # Normalizar telefone, validar mobile PT, slug, logger
 │   ├── google_maps.py           # Pesquisa empresas por nicho + cidade
 │   ├── website.py               # Playwright: analise completa do site (22 campos)
 │   ├── instagram.py             # Apify: raspa perfil IG + fallback por nome
-│   ├── instagram_search.py      # PAUSADO — pesquisa IG por keywords (nao funcional)
+│   ├── google_reviews.py        # Apify: raspa reviews do Google Maps
 │   └── enrichment.py            # Combina fontes, recupera telefone do site/WhatsApp
 │
-├── ai/
-│   ├── __init__.py
-│   ├── assistant.py             # Analise generica com GPT-5
-│   └── prompts/
-│       ├── base.txt             # Instrucoes base do assistente
-│       ├── analyst_contabilidade.md  # Analista "Nuno" — contabilidade
-│       └── restauracao.txt      # Benchmarks restauracao
+├── agentes/
+│   ├── atendente.py             # Motor do agente: SPIN, JSON, split msgs, escalacao
+│   ├── oficinas/
+│   │   └── system_prompt.md     # Agente Rui — especialista oficinas (378+ linhas)
+│   └── contabilidade/
+│       ├── personalidade.md     # Agente Nuno — tom e vocabulario (formato antigo)
+│       ├── conhecimento.md      # Servicos PercepTudo para contabilidade
+│       └── objecoes.md          # Objecoes comuns + respostas
 │
 ├── pdf/
-│   ├── __init__.py
-│   ├── generator.py             # Template generico Bold A4 (reportlab)
-│   ├── html_generator.py        # Templates HTML por nicho (Playwright→PDF)
-│   ├── orchestrator.py          # Orquestra: enriquecer + gerar PDF + registar no Sheets
+│   ├── html_generator.py        # Template fixo → {NOME_EMPRESA} → Playwright → PDF
+│   ├── orchestrator.py          # Batch: busca Sheets → gera PDFs → actualiza estado
 │   └── templates/
-│       └── contabilidade.html   # Template contabilidade (15+ paginas)
+│       └── contabilidade.html   # Template contabilidade (9 paginas)
 │
 ├── whatsapp/
-│   ├── __init__.py
 │   ├── sender.py                # Envia texto + PDF via Evolution API
-│   └── scheduler.py             # Envia em batch com intervalos (2-5 min)
+│   ├── message_generator.py     # GPT-5 gera mensagens variadas (fallback generico)
+│   ├── scheduler.py             # Envio diario: janela 9-13h, follow-ups, pausas
+│   ├── followup.py              # Logica de follow-up (4 toques: dia 0, 3, 7, 14)
+│   └── webhook.py               # Flask server: recebe msgs, buffer 15s, agente responde
 │
 ├── crm/
-│   ├── __init__.py
-│   └── sheets.py                # Google Sheets: CRUD leads + termos
+│   └── sheets.py                # Google Sheets: CRUD leads + termos + follow-up queries
 │
-├── followup/
-│   ├── __init__.py
-│   └── cron_followup.py         # POR FAZER — follow-ups automaticos
+├── ai/
+│   ├── assistant.py             # DEPRECATED — analise generica (substituido por agentes)
+│   └── prompts/                 # DEPRECATED — benchmarks por sector
 │
 └── output/
-    └── leads/                   # PDFs e relatorios por lead
-        └── {slug}/
-            ├── diagnostico.pdf
-            └── relatorio_analise.md
+    ├── leads/{slug}/diagnostico.pdf    # PDFs gerados
+    └── conversas/{phone}.json          # Historico de conversas (estado v2)
 ```
 
 ## Pipeline — como tudo funciona
 
-### Fase A: Raspagem (main.py)
+### Fase A: Raspagem (main.py scrape)
 
 ```
-python main.py --nicho "contabilistas" --cidade "Leiria"
+python main.py scrape --nicho "oficinas" --cidade "Lisboa"
      |
      v
-[scraper/google_maps.py]
-  - Pesquisa na Places API
-  - Extrai: nome, telefone, rating, reviews, website, morada
-  - Filtra: so telemoveis portugueses (9xx)
-  - Remove leads ja no Sheets (dedup)
-     |
-     v
-[scraper/enrichment.py]
-  - Leads SEM telemovel mas COM website → tenta recuperar do site/WhatsApp
-  - Sem telemovel em nenhuma fonte → DESCARTADO (nao gasta APIs)
-     |
-     v
-[scraper/website.py] — Analise completa (22 campos)
-  - Redes sociais: Instagram, Facebook, LinkedIn, YouTube, TikTok, Twitter/X
-  - Contactos: telefone (links + texto visivel), email, WhatsApp (wa.me)
-  - Features: chat, formulario/booking, ecommerce, blog, login/portal,
-    newsletter, video, testemunhos, cookie consent, HTTPS, multi-idioma
-  - Tecnologia: CMS (WordPress, Wix, Shopify, etc.), design score
-     |
-     v
-[scraper/instagram.py]
-  - Se tem link IG no site → raspa via Apify
-  - Se NAO tem → fallback: adivinha username pelo dominio (ate 5 tentativas)
-    Ex: watchnumber.pt → @watchnumber.pt, @watchnumber, @watchnumberpt
-  - Custo fallback: ~$0.001 por tentativa
-     |
-     v
-[crm/sheets.py]
-  - Grava leads com estado "novo"
-  - PARA AQUI — sem gastar OpenAI
+Google Maps → Enrichment (website 22 campos + IG + reviews) → Sheets (estado "novo")
 ```
 
-### Fase B: Geracao + Envio (disparado pelo Victor no terminal)
+### Fase B: Geracao de PDF (main.py gerar)
 
 ```
-Victor: "Gera PDFs e envia para os contabilistas de Leiria"
+python main.py gerar --nicho "oficinas" --cidade "Lisboa"
      |
      v
-[Busca leads do Sheets] (nicho + cidade, estado "novo")
+Template HTML fixo → substitui {NOME_EMPRESA}, {WEBSITE}, {INSTAGRAM} → Playwright → PDF
      |
      v
-[ai/assistant.py] ou [pdf/html_generator.py]
-  - Template HTML existe (ex: contabilidade) → analista Nuno + template rico
-  - Template nao existe → GPT-5 generico + template reportlab
-     |
-     v
-[pdf/] — Gera PDF A4
-  - Guarda em output/leads/{slug}/diagnostico.pdf
-  - Relatorio do Nuno guardado em relatorio_analise.md
-     |
-     v
-[whatsapp/sender.py]
-  - Envia mensagem + PDF via Evolution API
-  - Intervalo 2-5 min entre envios
-  - Actualiza Sheets: estado "contactado"
+Sheets: estado "pronto_para_envio", link_pdf preenchido
 ```
+
+### Fase C: Envio + Atendimento
+
+```
+python main.py enviar-dia
+     |
+     v
+Scheduler (janela 9-13h, max 80/dia, intervalos 3-7min):
+  - Se nicho tem agente especialista → Rui/Nuno gera outreach
+  - Se nao → message_generator generico
+  - Touch 1: mensagem + PDF
+  - Follow-ups: dia 3, 7, 14 (so texto)
+     |
+     v
+python main.py agente --port 80      (corre 24/7 na VPS)
+     |
+     v
+Lead responde no WhatsApp → webhook (buffer 15s) → agente especialista:
+  - Mensagens curtas quebradas (2-3 msgs com delay 1-2.5s)
+  - Metodo SPIN: situacao → problema → implicacao → solucao
+  - Escalacao inteligente: price_2x, irritated, high_value, complaint, etc
+  - Notifica Victor (351934215049) quando escalar
+  - Estado "agendado" → agente para de responder
+```
+
+## Agentes Especialistas
+
+Cada nicho tem um agente com personalidade e conhecimento proprio.
+O system prompt COMPLETO esta em `agentes/{nicho}/system_prompt.md`.
+
+### Agente Rui (oficinas) — ACTIVO
+- Especialista em oficinas de automoveis
+- Conhece: baias, folhas de obra, temparios, PHC, ANECRA
+- Metodo SPIN adaptado a oficinas
+- Sabe o que esta no PDF (4 dores + solucoes)
+- Escalacao com gatilhos especificos (preco 2x, alto valor >3 baias, etc)
+
+### Agente Nuno (contabilidade) — POR MIGRAR
+- Tem knowledge base em 3 ficheiros (formato antigo, funcional)
+- Precisa de system_prompt.md completo como o Rui
+
+### Aliases de nicho
+| Termos no Sheets | Agente | Template PDF |
+|-----------------|--------|-------------|
+| oficinas, oficina, oficina de automoveis, mecanica, auto | Rui | oficinas.html |
+| contabilidade, contabilista, contabilistas, gabinete de contabilidade | Nuno | contabilidade.html |
+
+## Estado de Conversa (v2)
+
+Historico guardado em `output/conversas/{phone}.json`:
+```json
+{
+  "version": 2,
+  "phone": "351912345678",
+  "nome": "AutoTop Oficina",
+  "nicho": "oficinas",
+  "stage": "problema",
+  "price_ask_count": 1,
+  "last_activity": "2026-03-29T17:00:00",
+  "lead_data": {"cidade": "Lisboa", "rating": "4.3", "website": "..."},
+  "messages": [{"role": "user/assistant", "content": "...", "timestamp": "..."}]
+}
+```
+
+SPIN stages: outreach → situacao → problema → implicacao → solucao → fecho → escalado | frio
 
 ## Google Sheets (CRM)
 
-### Colunas
-Nome | Telefone | Cidade | Sector | Rating | Reviews | Instagram | Website | Score | Estado | Data Contacto | Link PDF | Follow-up 1 | Follow-up 2 | Notas | Mensagem WhatsApp
+### Colunas (19)
+Nome | Telefone | Cidade | Sector | Rating | Reviews | Instagram | Website | Score | Estado | Data Contacto | Link PDF | Follow-up 1 | Follow-up 2 | Notas | Mensagem WhatsApp | Follow-up 3 | Proximo Follow-up | Touch Actual
 
 ### Estados possiveis
-novo → pronto_para_envio → contactado → followup_1 → followup_2 → frio
-                                      → respondeu (Victor trata)
-                                      → removido (pediu para parar)
+novo → pronto_para_envio → contactado → followup_1 → followup_2 → followup_3 → frio
+                                       → respondeu (agente atende)
+                                       → agendado (Victor trata, agente para)
+                                       → removido (opt-out)
 
-## Scraper de Website — 22 campos
+## Scheduler — Envio diario
 
-O scraper analisa cada site com Playwright e extrai:
+- Janela: 09:00-13:00 (configuravel via .env)
+- Limite: 80 msgs/dia
+- Intervalos: 3-7 min aleatorios entre mensagens
+- Pausa: 15-30 min a cada 10 mensagens
+- Prioridade: follow-ups primeiro, depois novos leads
+- Validacao WhatsApp antes de enviar (check_is_whatsapp)
+- Follow-ups: touch 2 (dia 3), touch 3 (dia 7), touch 4 (dia 14) → frio
+- PDF so no touch 1; touches 2-4 so texto
 
-| Categoria | Campos |
-|-----------|--------|
-| Redes sociais | instagram_url, facebook_url, linkedin_url, youtube_url, tiktok_url, twitter_url |
-| Contactos | phone_on_site, whatsapp_phone, email_on_site |
-| Features | has_chat, has_form, has_ecommerce, has_blog, has_login, has_newsletter, has_video, has_testimonials, has_cookie_consent, has_https, has_multilang |
-| Tecnologia | cms_platform, design_score |
+## Deploy (Easypanel)
 
-### Deteccao de telefone (3 fontes)
-1. Links `<a href="tel:...">` (clicaveis)
-2. Texto visivel na pagina (regex: +351 9xx, 9xx xxx xxx)
-3. Links WhatsApp (`wa.me/NUMERO`, `api.whatsapp.com/send?phone=NUMERO`)
+### VPS: 64.227.125.178
+- **Servico agente**: Docker, porta 80, always running (24/7)
+- **Dominio**: https://perceptudo-agente.6mfvzj.easypanel.host
+- **Webhook Evolution API**: https://perceptudo-agente.6mfvzj.easypanel.host/webhook/messages
+- **Health check**: https://perceptudo-agente.6mfvzj.easypanel.host/health
+- **GitHub**: https://github.com/perceptudo-lab/prospeccao-pecepTudo (privado)
+- **Scheduler**: corre localmente (`python main.py enviar-dia`) ou via cron na VPS
 
-### Fallback Instagram (5 tentativas)
-Quando nao ha link IG no site, tenta adivinhar pelo dominio:
-1. `dominio.tld` (ex: watchnumber.pt)
-2. `dominio` (ex: watchnumber)
-3. `dominiotld` (ex: watchnumberpt)
-4. `dominio.sector` (ex: watchnumber.contabilidade)
-5. `dominio_cidade` (ex: watchnumber_lisboa)
+### Variaveis de ambiente na VPS
+Todas as do .env + GOOGLE_SERVICE_ACCOUNT_DATA (JSON inline em vez de ficheiro)
 
-Ignora dominios de redes sociais (linkedin, facebook, etc.) para evitar falsos positivos.
+## Comandos uteis
 
-## PDF — Sistema hibrido
+```bash
+# Setup
+python -m venv venv && source venv/bin/activate
+pip install -r requirements.txt && playwright install chromium
 
-### Template HTML por nicho (Playwright)
-- Contabilidade: `pdf/templates/contabilidade.html` + analista "Nuno"
-- Outros nichos: por criar
+# Fase A — Raspagem
+python main.py scrape --nicho "oficinas" --cidade "Lisboa"
 
-### Template generico (reportlab)
-- `pdf/generator.py` — 7 paginas Bold A4
-- Usado quando nao ha template HTML para o nicho
+# Fase B — Gerar PDFs
+python main.py gerar --nicho "oficinas" --cidade "Lisboa"
 
-### Paginas do template contabilidade
-1. Capa (dark) — nome empresa (com overflow protection)
-2. Contexto do sector — stats do mercado
-3. Dor #1 fixa — Tarefas repetitivas (800h/ano)
-4. Dor #2 fixa — Escassez de talento (84%)
-5. Dor #3 fixa — Multas AT e documentos perdidos
-6. Analise personalizada — Website + Instagram
-7. Google Reviews
-8-10. Dores do cliente (geradas pelo Nuno)
-11. Oportunidades identificadas (badges "Acção imediata" / "Próximo passo")
-12. Como funciona — timeline 4 semanas
-13. Mapeamento Dor → Solução
-14. Comparação SEM IA vs COM PERCEP TUDO
-15. CTA — agendar diagnóstico
+# Fase C — Enviar (producao)
+python main.py enviar-dia              # envia novos + follow-ups na janela 9-13h
+python main.py enviar-dia --dry-run    # simula sem enviar (max 3-5 leads!)
 
-Numeracao de paginas automatica via CSS counter.
+# Agente atendente (local)
+python main.py agente --debug          # hot reload
+python main.py agente --port 5001      # producao local
 
-## Mapeamento de nichos
+# Status
+python main.py status
+python main.py status --nicho "oficinas" --cidade "Lisboa"
 
-Varios termos podem apontar para o mesmo template/analista:
+# Envio legacy (backwards compat)
+python main.py enviar [--nicho X] [--cidade Y]
+```
 
-| Termos aceites | Template | Analista |
-|----------------|----------|----------|
-| contabilidade, contabilista, contabilistas, gabinete de contabilidade, escritorio de contabilidade | contabilidade.html | analyst_contabilidade.md |
+## Regras para o Claude Code
+
+- Escreve codigo limpo com docstrings e type hints
+- Trata TODOS os erros com try/except (especialmente APIs externas)
+- Loga tudo (cada lead processado, cada envio, cada erro)
+- Nunca hardcoda API keys — usa .env
+- Se uma API falhar, nao crash — loga o erro e passa ao proximo lead
+- Sem telemovel = lead descartado ANTES de gastar APIs
+- O Sheets e a source of truth — tudo actualiza la
+- O PDF usa template fixo — so {NOME_EMPRESA}, {WEBSITE}, {INSTAGRAM}
+- Dry-runs e testes: MAXIMO 3-5 leads (nunca batch inteiro!)
+- System prompt do agente = ficheiro unico `system_prompt.md` por nicho
+- Mensagens WhatsApp do agente: max 3 frases por msg, quebradas com delay
 
 ## Branding PercepTudo
 
@@ -226,51 +258,11 @@ Varios termos podem apontar para o mesmo template/analista:
 - USAR: inteligencia aplicada, resultado mensuravel, processo otimizado
 - EVITAR: solucoes inovadoras, machine learning, cutting-edge, jargao tech
 
-## Comandos uteis
-
-```bash
-# Setup
-python -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-playwright install chromium
-
-# Fase A — Raspagem
-python main.py scrape --nicho "contabilistas" --cidade "Leiria"
-python main.py scrape --nicho "restaurantes" --cidade "Porto"
-
-# Fase B.1 — Gerar PDFs (ficam com estado 'pronto_para_envio')
-python main.py gerar --nicho "contabilistas" --cidade "Leiria"
-
-# Fase B.2 — Enviar por WhatsApp (dias depois, quando quiser)
-python main.py enviar                                              # todos os pendentes
-python main.py enviar --nicho "contabilistas" --cidade "Leiria"    # so os de Leiria
-
-# Ver estado dos leads
-python main.py status
-python main.py status --nicho "contabilistas" --cidade "Leiria"
-
-# Backwards compat (assume 'scrape')
-python main.py --nicho "contabilistas" --cidade "Leiria"
-```
-
-## Regras para o Claude Code
-
-- Escreve codigo limpo com docstrings e type hints
-- Trata TODOS os erros com try/except (especialmente APIs externas)
-- Loga tudo (cada lead processado, cada envio, cada erro)
-- Nunca hardcoda API keys — usa .env
-- Se uma API falhar, nao crash — loga o erro e passa ao proximo lead
-- Sem telemovel = lead descartado ANTES de gastar APIs (OpenAI, Apify)
-- O Sheets e a source of truth — tudo actualiza la
-- Os valores de ROI no JSON nunca devem conter "EUR" ou "€"
-- O PDF usa Helvetica/Helvetica-Bold (nao instalar fontes custom)
-
 ## Contexto adicional
 
 - O Victor esta em Portugal (Lisboa)
 - A PercepTudo foca em PMEs (10-200 funcionarios)
 - NAO vende chatbots — vende consultoria de IA (diagnostico + implementacao)
-- O PDF tem simulacao de ROI (nao prova social / casos de uso)
-- O Victor trata pessoalmente todas as respostas (sem bot de atendimento)
-- Contacto PDF: perceptudo@gmail.com | +351 910 104 835 | perceptudo.vercel.app
+- O Victor trata pessoalmente todas as reunioes (agente escala para ele)
+- Contacto: perceptudo@gmail.com | +351 910 104 835 | perceptudo.vercel.app
+- Victor WhatsApp pessoal (alertas): +351 934 215 049
