@@ -1,6 +1,8 @@
 """Interface com Google Sheets (CRM e historico de termos)."""
 
+import json
 import os
+import tempfile
 from datetime import datetime
 
 import gspread
@@ -71,7 +73,20 @@ HEADERS_TERMOS = [
 
 
 def _get_client() -> gspread.Client:
-    """Cria e retorna cliente gspread autenticado."""
+    """Cria e retorna cliente gspread autenticado.
+
+    Suporta dois modos:
+    - GOOGLE_SERVICE_ACCOUNT_JSON aponta para ficheiro .json (local)
+    - GOOGLE_SERVICE_ACCOUNT_DATA contem o JSON inline (Docker/VPS)
+    """
+    # Modo 1: JSON inline (para Docker/Easypanel)
+    json_data = os.getenv("GOOGLE_SERVICE_ACCOUNT_DATA")
+    if json_data:
+        info = json.loads(json_data)
+        creds = Credentials.from_service_account_info(info, scopes=SCOPES)
+        return gspread.authorize(creds)
+
+    # Modo 2: Ficheiro local
     creds_path = os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON")
     creds = Credentials.from_service_account_file(creds_path, scopes=SCOPES)
     return gspread.authorize(creds)
