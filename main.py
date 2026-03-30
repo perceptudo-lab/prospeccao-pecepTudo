@@ -183,7 +183,24 @@ def cmd_enviar_dia(args: argparse.Namespace) -> None:
     """Handler do subcomando 'enviar-dia' — scheduler diario com follow-ups."""
     from whatsapp.scheduler import send_daily_batch
 
-    stats = send_daily_batch(dry_run=args.dry_run)
+    # Limites por nicho (se especificados)
+    niche_limits = None
+    if args.niche_limits:
+        niche_limits = {}
+        for pair in args.niche_limits:
+            nicho, limit = pair.split(":")
+            niche_limits[nicho.strip()] = int(limit.strip())
+
+    # Cidades prioritarias
+    priority_cities = None
+    if args.priority_cities:
+        priority_cities = [c.strip() for c in args.priority_cities.split(",")]
+
+    stats = send_daily_batch(
+        dry_run=args.dry_run,
+        niche_limits=niche_limits,
+        priority_cities=priority_cities,
+    )
 
     if stats["total"] == 0:
         print("  Nenhum lead na fila (ou fora da janela horaria).\n")
@@ -282,6 +299,14 @@ def main() -> None:
         "enviar-dia", help="Envio diario: novos + follow-ups na janela 9-13h"
     )
     sp_enviar_dia.add_argument("--dry-run", action="store_true", help="Simular sem enviar")
+    sp_enviar_dia.add_argument(
+        "--niche-limits", nargs="+", metavar="NICHO:N",
+        help="Limite por nicho (ex: oficinas:40 contabilidade:40)",
+    )
+    sp_enviar_dia.add_argument(
+        "--priority-cities", type=str,
+        help="Cidades prioritarias separadas por virgula (ex: Lisboa,Porto)",
+    )
     sp_enviar_dia.set_defaults(func=cmd_enviar_dia)
 
     # Subcomando: agente (webhook server)

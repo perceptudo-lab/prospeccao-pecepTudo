@@ -26,12 +26,12 @@ logger = setup_logger(__name__)
 
 # Configuracao via .env
 HORARIO_INICIO = os.getenv("HORARIO_INICIO", "09:00")
-HORARIO_FIM = os.getenv("HORARIO_FIM", "13:00")
-INTERVALO_MIN = int(os.getenv("INTERVALO_MIN_SEG", "180"))
-INTERVALO_MAX = int(os.getenv("INTERVALO_MAX_SEG", "420"))
-PAUSA_CADA_N = int(os.getenv("PAUSA_CADA_N", "10"))
-PAUSA_MIN = int(os.getenv("PAUSA_MIN_SEG", "900"))
-PAUSA_MAX = int(os.getenv("PAUSA_MAX_SEG", "1800"))
+HORARIO_FIM = os.getenv("HORARIO_FIM", "13:30")
+INTERVALO_MIN = int(os.getenv("INTERVALO_MIN_SEG", "90"))
+INTERVALO_MAX = int(os.getenv("INTERVALO_MAX_SEG", "150"))
+PAUSA_CADA_N = int(os.getenv("PAUSA_CADA_N", "20"))
+PAUSA_MIN = int(os.getenv("PAUSA_MIN_SEG", "300"))
+PAUSA_MAX = int(os.getenv("PAUSA_MAX_SEG", "480"))
 MAX_ENVIOS_DIA = int(os.getenv("MAX_ENVIOS_DIA", "80"))
 
 # Mapeamento base de estados: estado actual -> proximo estado apos envio
@@ -130,11 +130,32 @@ def _next_followup_date(touch_sent: int, nicho: str = "") -> str | None:
     return (date.today() + timedelta(days=interval)).isoformat()
 
 
-def _get_daily_queue() -> list[dict]:
+def _prioritize_by_city(leads: list[dict], priority_cities: list[str] | None = None) -> list[dict]:
+    """Ordena leads por cidade — cidades prioritarias primeiro."""
+    if not priority_cities:
+        return leads
+    priority_set = {c.strip().lower() for c in priority_cities}
+
+    def sort_key(lead):
+        cidade = lead.get("Cidade", "").strip().lower()
+        return 0 if cidade in priority_set else 1
+
+    return sorted(leads, key=sort_key)
+
+
+def _get_daily_queue(
+    niche_limits: dict[str, int] | None = None,
+    priority_cities: list[str] | None = None,
+) -> list[dict]:
     """Constroi a fila de envio do dia.
 
     Prioridade: follow-ups primeiro (leads mais quentes), depois novos.
     Total limitado a MAX_ENVIOS_DIA.
+
+    Args:
+        niche_limits: Limite por nicho (ex: {"oficinas": 40, "contabilidade": 40}).
+                      Se None, sem limite por nicho (comportamento original).
+        priority_cities: Cidades prioritarias (ex: ["Lisboa", "Porto"]).
 
     Cada item recebe keys extra: '_touch' e '_type'.
     """
@@ -151,12 +172,34 @@ def _get_daily_queue() -> list[dict]:
             lead["_type"] = "followup"
             queue.append(lead)
 
-    # 2. Novos leads
+    # 2. Novos leads — filtrados por nicho + cidade prioritaria
     novos = get_leads_by_status("pronto_para_envio")
-    for lead in novos:
-        lead["_touch"] = 1
-        lead["_type"] = "novo"
-        queue.append(lead)
+
+    if niche_limits:
+        # Separar por nicho
+        niche_buckets: dict[str, list[dict]] = {}
+        for lead in novos:
+            sector = lead.get("Sector", "").strip().lower()
+            nicho = _resolve_niche(sector)
+            if nicho not in niche_buckets:
+                niche_buckets[nicho] = []
+            niche_buckets[nicho].append(lead)
+
+        # Priorizar cidades e aplicar limite por nicho
+        for nicho, limit in niche_limits.items():
+            bucket = niche_buckets.get(nicho, [])
+            bucket = _prioritize_by_city(bucket, priority_cities)
+            for lead in bucket[:limit]:
+                lead["_touch"] = 1
+                lead["_type"] = "novo"
+                queue.append(lead)
+    else:
+        # Sem limites por nicho — comportamento original
+        novos = _prioritize_by_city(novos, priority_cities)
+        for lead in novos:
+            lead["_touch"] = 1
+            lead["_type"] = "novo"
+            queue.append(lead)
 
     # Limitar ao maximo diario
     if len(queue) > MAX_ENVIOS_DIA:
@@ -173,11 +216,17 @@ def _get_daily_queue() -> list[dict]:
     return queue
 
 
-def send_daily_batch(dry_run: bool = False) -> dict:
+def send_daily_batch(
+    dry_run: bool = False,
+    niche_limits: dict[str, int] | None = None,
+    priority_cities: list[str] | None = None,
+) -> dict:
     """Processa a fila diaria de envios dentro da janela horaria.
 
     Args:
         dry_run: Se True, simula tudo sem enviar nem alterar Sheets.
+        niche_limits: Limite por nicho (ex: {"oficinas": 40, "contabilidade": 40}).
+        priority_cities: Cidades prioritarias (ex: ["Lisboa", "Porto"]).
 
     Para cada lead:
     1. Verifica janela horaria
@@ -201,7 +250,7 @@ def send_daily_batch(dry_run: bool = False) -> dict:
         )
         return stats
 
-    queue = _get_daily_queue()
+    queue = _get_daily_queue(niche_limits=niche_limits, priority_cities=priority_cities)
     if not queue:
         logger.info("Nenhum lead na fila de envio")
         return stats
@@ -231,7 +280,7 @@ def send_daily_batch(dry_run: bool = False) -> dict:
             break
 
         nome = lead.get("Nome", "?")
-        telefone = lead.get("Telefone", "")
+        telefone = str(lead.get("Telefone", ""))
         sector = lead.get("Sector", "")
         touch = lead["_touch"]
         tipo = lead["_type"]
@@ -244,7 +293,7 @@ def send_daily_batch(dry_run: bool = False) -> dict:
 
         print(f"  [{i + 1}/{len(queue)}] {nome} (touch {touch}, {tipo})")
 
-        # Validar WhatsApp (skip em dry-run)
+        # Validar WhatsApp (skip rapido antes de gastar GPT)
         if not dry_run and not check_is_whatsapp(telefone):
             logger.warning("'%s' (%s) nao esta no WhatsApp — a saltar", nome, telefone)
             stats["saltados"] += 1
@@ -262,12 +311,12 @@ def send_daily_batch(dry_run: bool = False) -> dict:
         use_agent = has_niche_agent(sector)
 
         lead_data = {
-            "telefone": telefone,
-            "cidade": lead.get("Cidade", ""),
+            "telefone": str(telefone),
+            "cidade": str(lead.get("Cidade", "")),
             "rating": str(lead.get("Rating", "")),
             "reviews": str(lead.get("Reviews", "")),
-            "website": lead.get("Website", ""),
-            "instagram": lead.get("Instagram", ""),
+            "website": str(lead.get("Website", "")),
+            "instagram": str(lead.get("Instagram", "")),
         }
 
         if use_agent and touch == 1:
