@@ -317,44 +317,122 @@ Reestruturacao major do sistema inteiro. Objectivo: simplificar PDF (sem IA), sc
 
 ---
 
+## Sessao 5: 30-31 Marco 2026
+
+### O que foi construido
+
+#### 1. Template oficinas + PDFs
+- Template `pdf/templates/oficinas.html` copiado e adaptado (badges website/IG na capa)
+- Aliases de nicho com acentos (oficina de automóveis) corrigidos
+- 60 PDFs de oficinas gerados em batch (0 erros)
+- Coluna "Mensagem WhatsApp" removida do Sheets e codigo (19→18 colunas)
+
+#### 2. Agente Marco (contabilidade) — COMPLETO
+- `agentes/contabilidade/system_prompt.md` — 456+ linhas
+- SPIN adaptado a contabilidade (IVA, IRC, IES, SNC, SAF-T)
+- Seccao "PDF ENVIADO AO LEAD" com 3 dores do template
+- Escalacao: 8 gatilhos (imediata + comercial + tecnica)
+- Follow-up: 5 toques (dia 0, 3, 7, 14, 30 com reengagement Tally)
+- Testado end-to-end: outreach + conversa + SPIN stages
+
+#### 3. Follow-ups especificos por agente
+- Cada agente gera follow-ups conforme a SUA cadencia no system_prompt.md
+- Rui: ANECRA (dia 1), 3 processos (dia 3), chamadas (dia 7), porta aberta (dia 14)
+- Marco: OCC (dia 1), classificacao (dia 3), documentos (dia 7), porta aberta (dia 14), Tally (dia 30)
+- Nova funcao `generate_followup_message()` no atendente.py
+- Opt-out footer em todos os follow-ups
+
+#### 4. Safety nets (redes de seguranca no codigo)
+- **irritated**: detecta "chato", "farto", "bloquear" → escala Victor
+- **wants_schedule**: detecta "agendar", "vamos marcar" → escala Victor
+- **high_value**: detecta >3 baias (oficinas), >200 clientes (contabilidade) → escala Victor
+- **SPIN blocking**: impede saltos de stage (situacao→solucao forcado a problema)
+- **Opt-out expandido**: 6→14 keywords (+sair, chega, desinscrever, unsubscribe)
+
+#### 5. Scheduler avancado
+- `--niche-limits oficinas:40 contabilidade:40` — limite por nicho
+- `--priority-cities "Lisboa,Porto"` — cidades prioritarias primeiro
+- `--instances "Percep Tudo AI" "Percep Tudo - AI"` — multi-numero round-robin
+- Fix: telefone/rating/reviews como int do Sheets → str()
+- Intervalos e janela configuraveis via .env
+
+#### 6. Multi-instancia Evolution API
+- `sender.py`: param `instance` em send_text, send_pdf, check_is_whatsapp
+- `atendente.py`: instance propagado em cascata, guardado no conv_state
+- `webhook.py`: extrai instance do payload, agente responde pela mesma
+- `scheduler.py`: round-robin de instancias
+- Webhooks configurados: Percep Tudo AI + Percep Tudo - AI → VPS
+
+#### 7. Primeiro disparo real — 30 Marco 2026
+- 44 leads contactados (30 oficinas + 14 contabilidade)
+- Conta comercial PercepTudo restringida ~24h (intervalos muito curtos + numero novo)
+- Teste com numero pessoal: 44 msgs enviadas, 2+ respostas em <2h (vs 0 visualizacoes no business)
+- Descoberta: numeros business desconhecidos sao ignorados, numeros pessoais sao vistos
+- 2 numeros novos (normais) adquiridos e configurados para prospeccao
+
+### Testes realizados
+
+| Teste | Resultado |
+|-------|----------|
+| 60 PDFs oficinas | 60/60 OK, 0 erros |
+| Marco outreach contabilidade | OK — referencias OCC, 800h, multas AT |
+| Marco follow-up dia 30 (Tally) | OK — menciona Tally 60€/mes |
+| Rui follow-up dia 1 (ANECRA) | OK — menciona 7000 mecanicos |
+| Safety net irritated | OK — detecta e escala |
+| Safety net wants_schedule | OK — detecta e escala |
+| Safety net high_value | OK — detecta >3 baias, >200 clientes |
+| SPIN blocking | OK — impede saltos |
+| Envio via Percep Tudo AI | OK — chegou |
+| Envio via Percep Tudo - AI | OK — chegou |
+| Webhook multi-instancia | OK — agente respondeu pela mesma instancia |
+| Envio real 44 leads (comercial) | 44 enviados, conta restringida |
+| Envio real 44 leads (pessoal) | 44 enviados, 0 erros, 2+ respostas |
+
+---
+
 ## Estado actual
 
 ### Sheets
-- 60 leads contabilidade Lisboa com estado `pronto_para_envio` (PDFs gerados)
-- 60+ leads de outros sectores/cidades com estado `novo`
-- 1 lead teste (AutoTop Oficina) com estado `contactado`
+- 44 leads oficinas+contabilidade com estado `contactado`
+- 70 leads oficinas+contabilidade com estado `pronto_para_envio`
+- 6 leads com outros estados
 
 ### VPS (Easypanel)
 - Servico agente: ONLINE 24/7
-- Webhook Evolution API: CONFIGURADO
-- Template oficinas: POR SUBIR (HTML no Desktop)
+- Webhook Evolution API: CONFIGURADO (3 instancias)
+- Deploy automatico via GitHub push
+- Codigo actualizado: multi-instancia + safety nets + Marco
+
+### Instancias Evolution API
+- PercepTudo (business): restringida ate 31/03 ~12:10
+- Percep Tudo AI (normal): activa, webhook configurado
+- Percep Tudo - AI (normal): activa, webhook configurado
+- Pessoal - Joaozin (normal): numero pessoal Victor
 
 ### GitHub
-- Repo: perceptudo-lab/prospeccao-pecepTudo (publico temporariamente)
-- Ultimo commit: buffer 15s + agente Rui
+- Repo: perceptudo-lab/prospeccao-pecepTudo
+- Ultimo commit: multi-instancia + disparo_amanha.py
 
 ---
 
 ## O que falta fazer
 
-### Prioridade alta (para amanha 30 Marco)
-- [ ] Subir template HTML oficinas + gerar PDFs oficinas
-- [ ] Disparar envio real contabilidade (60 leads)
-- [ ] Disparar envio real oficinas
-- [ ] Afinar tom da primeira mensagem (outreach)
-- [ ] Criar system_prompt.md completo para Nuno (contabilidade) — Victor fornece ficheiro
-- [ ] Volume persistente no Easypanel para conversas (sobreviver a redeploys)
-- [ ] Tornar repo GitHub privado + conectar Easypanel ao GitHub
+### Prioridade alta (31 Marco)
+- [ ] Disparar 70 leads restantes via 2 numeros novos (`python disparo_amanha.py`)
+- [ ] Monitorizar respostas e ajustar tom se necessario
+- [ ] Aquecimento gradual dos numeros (25→40→60→80 por semana)
 
 ### Prioridade media
 - [ ] Mais nichos (restauracao, advocacia, clinicas)
-- [ ] Cron job na VPS para scheduler automatico as 9h
+- [ ] Cron job na VPS para scheduler automatico
 - [ ] Follow-up mid-conversa (leads que pararam de responder ao agente)
+- [ ] Volume persistente no Easypanel para conversas
+- [ ] Perfil WhatsApp dos numeros novos (nome, foto)
 
 ### Prioridade baixa
 - [ ] Testes automatizados
 - [ ] Monitoramento de block rate / report rate
-- [ ] 3 numeros WhatsApp para chegar a 100/dia
+- [ ] Dashboard de metricas (visualizacoes, respostas, agendamentos)
 
 ---
 
@@ -366,5 +444,5 @@ Reestruturacao major do sistema inteiro. Objectivo: simplificar PDF (sem IA), sc
 | Apify (Instagram + Reviews) | OK (plano gratis $5/mes) |
 | OpenAI GPT-5 | OK (Chat Completions API) |
 | Google Sheets | OK (service account + env var inline para Docker) |
-| Evolution API (WhatsApp) | OK (VPS Easypanel, instancia "PercepTudo") |
+| Evolution API (WhatsApp) | OK (VPS Easypanel, 4 instancias) |
 | Flask webhook (VPS) | OK (https://perceptudo-agente.6mfvzj.easypanel.host) |

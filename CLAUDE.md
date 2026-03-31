@@ -185,16 +185,21 @@ novo → pronto_para_envio → contactado → followup_1 → followup_2 → foll
 
 ## Scheduler — Envio diario
 
-- Janela: 09:00-13:00 (configuravel via .env)
-- Limite: 80 msgs/dia
-- Intervalos: 3-7 min aleatorios entre mensagens
-- Pausa: 15-30 min a cada 10 mensagens
+- Janela: configuravel via .env (HORARIO_INICIO, HORARIO_FIM)
+- Limite: configuravel via .env (MAX_ENVIOS_DIA)
+- Intervalos: configuravel via .env (INTERVALO_MIN_SEG, INTERVALO_MAX_SEG)
+- Pausa: configuravel via .env (PAUSA_CADA_N, PAUSA_MIN_SEG, PAUSA_MAX_SEG)
 - Prioridade: follow-ups primeiro, depois novos leads
+- Prioridade por cidade: --priority-cities "Lisboa,Porto"
+- Limite por nicho: --niche-limits oficinas:40 contabilidade:40
+- **Multi-instancia**: --instances "Percep Tudo AI" "Percep Tudo - AI" (round-robin)
 - Validacao WhatsApp antes de enviar (check_is_whatsapp)
-- Follow-ups por nicho:
+- Follow-ups por nicho (agente gera conforme a sua cadencia):
   - Oficinas (Rui): 4 toques — dia 0, 3, 7, 14 → frio
   - Contabilidade (Marco): 5 toques — dia 0, 3, 7, 14, 30 → frio
 - PDF so no touch 1; touches seguintes so texto
+- Safety nets: irritated, wants_schedule, high_value, complaint, price_2x
+- SPIN blocking: impede saltos de stage (situacao→solucao forcado a problema)
 
 ## Deploy (Easypanel)
 
@@ -205,6 +210,15 @@ novo → pronto_para_envio → contactado → followup_1 → followup_2 → foll
 - **Health check**: https://perceptudo-agente.6mfvzj.easypanel.host/health
 - **GitHub**: https://github.com/perceptudo-lab/prospeccao-pecepTudo (privado)
 - **Scheduler**: corre localmente (`python main.py enviar-dia`) ou via cron na VPS
+- **Deploy automatico**: push para GitHub → Easypanel reconstroi automaticamente
+
+### Instancias Evolution API
+| Instancia | Tipo | Uso | Webhook |
+|-----------|------|-----|---------|
+| PercepTudo | Business | Agente atende (restringido ate 31/03 12:10) | VPS |
+| Percep Tudo AI | Normal | Prospeccao (numero novo) | VPS |
+| Percep Tudo - AI | Normal | Prospeccao (numero novo) | VPS |
+| Pessoal - Joaozin | Normal | Numero pessoal Victor (testes) | — |
 
 ### Variaveis de ambiente na VPS
 Todas as do .env + GOOGLE_SERVICE_ACCOUNT_DATA (JSON inline em vez de ficheiro)
@@ -223,8 +237,14 @@ python main.py scrape --nicho "oficinas" --cidade "Lisboa"
 python main.py gerar --nicho "oficinas" --cidade "Lisboa"
 
 # Fase C — Enviar (producao)
-python main.py enviar-dia              # envia novos + follow-ups na janela 9-13h
+python main.py enviar-dia              # envia novos + follow-ups na janela
 python main.py enviar-dia --dry-run    # simula sem enviar (max 3-5 leads!)
+python main.py enviar-dia --instances "Percep Tudo AI" "Percep Tudo - AI"  # multi-numero
+python main.py enviar-dia --niche-limits oficinas:40 contabilidade:40      # limite por nicho
+python main.py enviar-dia --priority-cities "Lisboa,Porto"                 # cidades primeiro
+python disparo_amanha.py               # script pronto com 2 numeros novos
+python disparo_amanha.py --dry-run     # simular
+python disparo_amanha.py --now         # ignorar janela horaria
 
 # Agente atendente (local)
 python main.py agente --debug          # hot reload
