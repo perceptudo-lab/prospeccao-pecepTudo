@@ -196,10 +196,14 @@ def cmd_enviar_dia(args: argparse.Namespace) -> None:
     if args.priority_cities:
         priority_cities = [c.strip() for c in args.priority_cities.split(",")]
 
+    # Instancias Evolution (se especificadas)
+    instances = args.instances if args.instances else None
+
     stats = send_daily_batch(
         dry_run=args.dry_run,
         niche_limits=niche_limits,
         priority_cities=priority_cities,
+        instances=instances,
     )
 
     if stats["total"] == 0:
@@ -306,6 +310,10 @@ def main() -> None:
     sp_enviar_dia.add_argument(
         "--priority-cities", type=str,
         help="Cidades prioritarias separadas por virgula (ex: Lisboa,Porto)",
+    )
+    sp_enviar_dia.add_argument(
+        "--instances", nargs="+", metavar="INSTANCE",
+        help="Instancias Evolution para round-robin (ex: 'Percep Tudo AI' 'Percep Tudo - AI')",
     )
     sp_enviar_dia.set_defaults(func=cmd_enviar_dia)
 

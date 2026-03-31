@@ -311,12 +311,12 @@ def _parse_gpt_response(raw: str, current_stage: str) -> dict:
         }
 
 
-def _send_split_messages(phone: str, messages: list[str]) -> bool:
+def _send_split_messages(phone: str, messages: list[str], instance: str | None = None) -> bool:
     """Envia multiplas mensagens com delay humano entre elas."""
     for i, msg in enumerate(messages):
         if not msg.strip():
             continue
-        success = send_text(phone, msg)
+        success = send_text(phone, msg, instance=instance)
         if not success:
             logger.error("Falha ao enviar msg %d/%d para %s", i + 1, len(messages), phone)
             return False
@@ -426,7 +426,7 @@ def _handle_escalation(
 
 
 def generate_outreach_message(
-    nome: str, sector: str, lead_data: dict,
+    nome: str, sector: str, lead_data: dict, instance: str | None = None,
 ) -> tuple[list[str], dict]:
     """Gera primeira mensagem de outreach usando o agente especialista.
 
@@ -434,6 +434,7 @@ def generate_outreach_message(
         nome: Nome da empresa.
         sector: Sector/nicho.
         lead_data: Dados do lead (cidade, rating, website, etc).
+        instance: Instancia Evolution por onde vai ser enviado.
 
     Returns:
         Tupla (lista de mensagens, estado de conversa criado).
@@ -447,6 +448,7 @@ def generate_outreach_message(
         "phone": phone,
         "nome": nome,
         "nicho": nicho,
+        "instance": instance,
         "stage": "outreach",
         "price_ask_count": 0,
         "last_activity": datetime.now().isoformat(),
@@ -611,8 +613,13 @@ def generate_followup_message(
         return [f"{nome}, o diagnostico que preparamos para si continua disponivel. Se tiver questoes, estamos por aqui.\n\n_Para deixar de receber mensagens, responda PARAR._"]
 
 
-def handle_incoming_message(phone: str, message: str) -> str | None:
+def handle_incoming_message(phone: str, message: str, instance: str | None = None) -> str | None:
     """Processa mensagem recebida de um lead e gera resposta.
+
+    Args:
+        phone: Telefone do lead.
+        message: Texto da mensagem recebida.
+        instance: Instancia Evolution que recebeu a mensagem. Responde pela mesma.
 
     Fluxo:
     1. Responde 24/7
@@ -666,6 +673,11 @@ def handle_incoming_message(phone: str, message: str) -> str | None:
 
     # 5. Carregar estado de conversa
     conv_state = _load_conversation_state(phone)
+
+    # Guardar/resolver instancia — responder pela mesma que recebeu
+    if instance:
+        conv_state["instance"] = instance
+    reply_instance = conv_state.get("instance")
 
     # Enriquecer estado com dados do lead se nao tinha
     if not conv_state.get("nome") and nome != "Cliente":
@@ -800,7 +812,7 @@ def handle_incoming_message(phone: str, message: str) -> str | None:
         conv_state["stage"] = "escalado"
 
         # Enviar mensagens do GPT (que ja incluem despedida de escalacao)
-        _send_split_messages(telefone, parsed["messages"])
+        _send_split_messages(telefone, parsed["messages"], instance=reply_instance)
 
         # Notificar Victor
         _handle_escalation(
@@ -822,7 +834,7 @@ def handle_incoming_message(phone: str, message: str) -> str | None:
         return parsed["messages"][-1] if parsed["messages"] else None
 
     # 10. Enviar resposta normal (mensagens quebradas)
-    _send_split_messages(telefone, parsed["messages"])
+    _send_split_messages(telefone, parsed["messages"], instance=reply_instance)
 
     # Guardar no historico
     for msg in parsed["messages"]:

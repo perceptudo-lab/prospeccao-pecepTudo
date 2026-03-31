@@ -45,28 +45,33 @@ def _flush_buffer(phone: str) -> None:
     # Juntar todas as mensagens numa so (separadas por newline)
     combined = "\n".join(buffer["messages"])
     msg_count = len(buffer["messages"])
+    instance = buffer.get("instance")
 
     logger.info(
-        "Buffer flush para %s: %d mensagem(ns) combinadas",
-        phone, msg_count,
+        "Buffer flush para %s: %d mensagem(ns) combinadas (instance: %s)",
+        phone, msg_count, instance or "default",
     )
 
     # Processar em background
     thread = threading.Thread(
         target=handle_incoming_message,
-        args=(phone, combined),
+        args=(phone, combined, instance),
         daemon=True,
     )
     thread.start()
 
 
-def _buffer_message(phone: str, text: str) -> None:
+def _buffer_message(phone: str, text: str, instance: str | None = None) -> None:
     """Adiciona mensagem ao buffer e reinicia o timer."""
     with _buffer_lock:
         if phone not in _message_buffers:
-            _message_buffers[phone] = {"messages": [], "timer": None}
+            _message_buffers[phone] = {"messages": [], "timer": None, "instance": None}
 
         buf = _message_buffers[phone]
+
+        # Guardar instancia (ultima recebida ganha)
+        if instance:
+            buf["instance"] = instance
 
         # Cancelar timer anterior
         if buf["timer"] is not None:
@@ -132,10 +137,13 @@ def receive_message():
             logger.info("Mensagem sem texto de %s — ignorando", phone)
             return jsonify({"status": "ignored", "reason": "no text"}), 200
 
-        logger.info("Webhook: mensagem de %s: %s", phone, text[:100])
+        # Extrair instancia de origem (Evolution API inclui no payload)
+        instance = payload.get("instance") or payload.get("instanceName")
 
-        # Adicionar ao buffer (processa apos 8s de silencio)
-        _buffer_message(phone, text.strip())
+        logger.info("Webhook: mensagem de %s via %s: %s", phone, instance or "default", text[:100])
+
+        # Adicionar ao buffer (processa apos 15s de silencio)
+        _buffer_message(phone, text.strip(), instance=instance)
 
         return jsonify({"status": "ok", "buffered": True}), 200
 

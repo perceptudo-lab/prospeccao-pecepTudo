@@ -15,11 +15,15 @@ load_dotenv()
 logger = setup_logger(__name__)
 
 
-def _get_config() -> dict:
-    """Retorna configuracao da Evolution API."""
+def _get_config(instance: str | None = None) -> dict:
+    """Retorna configuracao da Evolution API.
+
+    Args:
+        instance: Nome da instancia Evolution. Se None, usa EVOLUTION_INSTANCE do .env.
+    """
     url = os.getenv("EVOLUTION_API_URL", "http://localhost:8080")
     api_key = os.getenv("EVOLUTION_API_KEY", "")
-    instance = os.getenv("EVOLUTION_INSTANCE", "perceptudo-01")
+    inst = instance or os.getenv("EVOLUTION_INSTANCE", "perceptudo-01")
 
     if not api_key:
         raise ValueError("EVOLUTION_API_KEY nao definida no .env")
@@ -27,7 +31,7 @@ def _get_config() -> dict:
     return {
         "base_url": url.rstrip("/"),
         "api_key": api_key,
-        "instance": instance,
+        "instance": inst,
     }
 
 
@@ -39,18 +43,19 @@ def _format_phone_for_whatsapp(phone: str) -> str:
     return str(phone).replace("+", "").replace(" ", "").replace("-", "")
 
 
-def send_text(phone: str, message: str) -> bool:
+def send_text(phone: str, message: str, instance: str | None = None) -> bool:
     """Envia mensagem de texto via WhatsApp.
 
     Args:
         phone: Telefone no formato +351XXXXXXXXX.
         message: Texto da mensagem.
+        instance: Instancia Evolution. Se None, usa default do .env.
 
     Returns:
         True se enviou com sucesso, False caso contrario.
     """
     try:
-        config = _get_config()
+        config = _get_config(instance)
         wa_phone = _format_phone_for_whatsapp(phone)
 
         url = f"{config['base_url']}/message/sendText/{config['instance']}"
@@ -80,19 +85,20 @@ def send_text(phone: str, message: str) -> bool:
         return False
 
 
-def send_pdf(phone: str, pdf_path: str, filename: str = "diagnostico.pdf") -> bool:
+def send_pdf(phone: str, pdf_path: str, filename: str = "diagnostico.pdf", instance: str | None = None) -> bool:
     """Envia PDF via WhatsApp.
 
     Args:
         phone: Telefone no formato +351XXXXXXXXX.
         pdf_path: Caminho para o ficheiro PDF.
         filename: Nome do ficheiro que o destinatario ve.
+        instance: Instancia Evolution. Se None, usa default do .env.
 
     Returns:
         True se enviou com sucesso, False caso contrario.
     """
     try:
-        config = _get_config()
+        config = _get_config(instance)
         wa_phone = _format_phone_for_whatsapp(phone)
 
         # Resolver path absoluto e verificar existencia
@@ -135,17 +141,18 @@ def send_pdf(phone: str, pdf_path: str, filename: str = "diagnostico.pdf") -> bo
         return False
 
 
-def check_is_whatsapp(phone: str) -> bool:
+def check_is_whatsapp(phone: str, instance: str | None = None) -> bool:
     """Verifica se o numero existe no WhatsApp via Evolution API.
 
     Args:
         phone: Telefone no formato +351XXXXXXXXX.
+        instance: Instancia Evolution. Se None, usa default do .env.
 
     Returns:
         True se o numero esta no WhatsApp, False caso contrario.
     """
     try:
-        config = _get_config()
+        config = _get_config(instance)
         wa_phone = _format_phone_for_whatsapp(phone)
 
         url = f"{config['base_url']}/chat/whatsappNumbers/{config['instance']}"
@@ -174,7 +181,7 @@ def check_is_whatsapp(phone: str) -> bool:
 
 
 def send_lead_message(
-    phone: str, message: str, pdf_path: str | None = None
+    phone: str, message: str, pdf_path: str | None = None, instance: str | None = None,
 ) -> bool:
     """Envia mensagem a um lead: texto + pausa + PDF (opcional).
 
@@ -182,6 +189,7 @@ def send_lead_message(
         phone: Telefone do lead.
         message: Mensagem personalizada de WhatsApp.
         pdf_path: Caminho para o PDF. Se None, envia so texto (follow-ups).
+        instance: Instancia Evolution. Se None, usa default do .env.
 
     Returns:
         True se enviou com sucesso.
@@ -189,7 +197,7 @@ def send_lead_message(
     logger.info("A enviar mensagem para %s...", phone)
 
     # 1. Enviar texto
-    text_ok = send_text(phone, message)
+    text_ok = send_text(phone, message, instance=instance)
     if not text_ok:
         logger.error("Falha ao enviar texto para %s", phone)
         return False
@@ -200,7 +208,7 @@ def send_lead_message(
         logger.info("A aguardar %ds antes de enviar PDF...", delay)
         time.sleep(delay)
 
-        pdf_ok = send_pdf(phone, pdf_path)
+        pdf_ok = send_pdf(phone, pdf_path, instance=instance)
         if not pdf_ok:
             logger.error("Falha ao enviar PDF para %s", phone)
             return False

@@ -220,6 +220,7 @@ def send_daily_batch(
     dry_run: bool = False,
     niche_limits: dict[str, int] | None = None,
     priority_cities: list[str] | None = None,
+    instances: list[str] | None = None,
 ) -> dict:
     """Processa a fila diaria de envios dentro da janela horaria.
 
@@ -227,6 +228,7 @@ def send_daily_batch(
         dry_run: Se True, simula tudo sem enviar nem alterar Sheets.
         niche_limits: Limite por nicho (ex: {"oficinas": 40, "contabilidade": 40}).
         priority_cities: Cidades prioritarias (ex: ["Lisboa", "Porto"]).
+        instances: Lista de instancias Evolution para round-robin. Se None, usa default.
 
     Para cada lead:
     1. Verifica janela horaria
@@ -257,6 +259,9 @@ def send_daily_batch(
 
     stats["total"] = len(queue)
     count_enviados = 0
+
+    # Round-robin de instancias
+    instance_list = instances or [None]  # None = default do .env
 
     mode_label = "SIMULACAO (dry-run)" if dry_run else "ENVIO DIARIO"
     print(f"\n{'='*60}")
@@ -291,10 +296,14 @@ def send_daily_batch(
             stats["saltados"] += 1
             continue
 
-        print(f"  [{i + 1}/{len(queue)}] {nome} (touch {touch}, {tipo})")
+        # Seleccionar instancia (round-robin)
+        current_instance = instance_list[i % len(instance_list)]
+        inst_label = f" [{current_instance}]" if current_instance else ""
+
+        print(f"  [{i + 1}/{len(queue)}] {nome} (touch {touch}, {tipo}){inst_label}")
 
         # Validar WhatsApp (skip rapido antes de gastar GPT)
-        if not dry_run and not check_is_whatsapp(telefone):
+        if not dry_run and not check_is_whatsapp(telefone, instance=current_instance):
             logger.warning("'%s' (%s) nao esta no WhatsApp — a saltar", nome, telefone)
             stats["saltados"] += 1
             print(f"    x Nao esta no WhatsApp")
@@ -322,7 +331,7 @@ def send_daily_batch(
         if use_agent and touch == 1:
             # Touch 1: outreach + PDF
             try:
-                msgs, conv_state = generate_outreach_message(nome, sector, lead_data)
+                msgs, conv_state = generate_outreach_message(nome, sector, lead_data, instance=current_instance)
                 mensagem = " | ".join(msgs)
             except Exception as e:
                 logger.error("Erro ao gerar outreach agente para '%s': %s", nome, e)
@@ -364,17 +373,18 @@ def send_daily_batch(
                 print(f"    > {m[:100]}...")
             print(f"    -> {novo_estado} | follow-up: {proximo_followup or 'nenhum'}")
         else:
-            # Enviar mensagens
+            # Enviar mensagens (pela instancia seleccionada)
             if use_agent:
-                success = _send_split_messages(telefone, msgs)
+                success = _send_split_messages(telefone, msgs, instance=current_instance)
                 if success and pdf_path:
                     time.sleep(random.uniform(2, 5))
-                    success = send_pdf(telefone, pdf_path)
+                    success = send_pdf(telefone, pdf_path, instance=current_instance)
             else:
                 success = send_lead_message(
                     phone=telefone,
                     message=mensagem,
                     pdf_path=pdf_path,
+                    instance=current_instance,
                 )
 
             if success:
